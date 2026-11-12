@@ -7,6 +7,7 @@ import httpx
 from video_generator.providers.base import VideoProvider
 from video_generator.providers.fake import FakeProvider
 from video_generator.providers.http import HttpProvider
+from video_generator.providers.stills import StillsProvider
 from video_generator.settings import VideoGeneratorSettings
 
 
@@ -21,6 +22,8 @@ def build_providers(
     providers: dict[str, VideoProvider] = {}
     if "fake" in wanted:
         providers["fake"] = FakeProvider(work_dir)
+    if "stills" in wanted:
+        providers["stills"] = StillsProvider(work_dir, settings.stills_long_edge)
     if "http" in wanted:
         providers["http"] = HttpProvider(settings, http_client)
     unknown = wanted - set(providers) - {None}

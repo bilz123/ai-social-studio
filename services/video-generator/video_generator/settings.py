@@ -9,10 +9,14 @@ from studio_common.config import ServiceSettings, has_value
 class VideoGeneratorSettings(ServiceSettings):
     service_name: str = "video-generator"
 
-    # Which provider to use first, and which to fall back to. `fake` renders a local test clip
-    # with FFmpeg (development and CI only; refused in staging/production).
+    # Which provider to use first, and which to fall back to. `fake` renders a small local test
+    # clip (development and CI only; refused in staging/production); `stills` is production-safe.
     video_provider_primary: str = "fake"
     video_provider_fallback: str | None = None
+
+    # `stills` = free camera moves over the customer's photo (no AI model, no GPU, no cost).
+    # Longest output edge in pixels (1920 gives 1080x1920 for 9:16).
+    stills_long_edge: int = 1920
 
     # The generic REST provider. Credentials come from the environment, never from code.
     video_http_base_url: str | None = None
