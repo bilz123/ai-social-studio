@@ -1,5 +1,4 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom'
-import { ProfilePage } from '@/features/account/pages/ProfilePage'
 import { AuthLayout } from '@/features/auth/components/AuthLayout'
 import { GuestOnly, RequireAuth } from '@/features/auth/components/Guards'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
@@ -8,6 +7,15 @@ import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
+import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+import {
+  AnalyticsPage,
+  ConnectedAccountsPage,
+  CreateVideoPage,
+  MyVideosPage,
+  PublishingHistoryPage,
+  ScheduledPostsPage,
+} from '@/features/placeholders/sectionPages'
 import { NotFoundPage } from '@/features/health/pages/NotFoundPage'
 import { StatusPage } from '@/features/health/pages/StatusPage'
 import { AppLayout } from '@/shared/layout/AppLayout'
@@ -45,7 +53,14 @@ export const routes = [
         element: <AppLayout />,
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/profile', element: <ProfilePage /> },
+          { path: '/create', element: <CreateVideoPage /> },
+          { path: '/accounts', element: <ConnectedAccountsPage /> },
+          { path: '/videos', element: <MyVideosPage /> },
+          { path: '/history', element: <PublishingHistoryPage /> },
+          { path: '/scheduled', element: <ScheduledPostsPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
+          { path: '/settings', element: <SettingsPage /> },
+          { path: '/profile', element: <Navigate to="/settings" replace /> },
         ],
       },
     ],

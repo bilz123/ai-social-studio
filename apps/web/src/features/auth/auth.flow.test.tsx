@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { jsonResponse, mockApi, renderApp, sampleUser } from '@/test/renderApp'
+import { emptyActivity, jsonResponse, mockApi, renderApp, sampleUser } from '@/test/renderApp'
 
 const signedOut = () => jsonResponse({ code: 'unauthenticated', detail: 'Unauthenticated.' }, 401)
 
@@ -21,7 +21,10 @@ describe('protected routes', () => {
   })
 
   it('shows the dashboard to a signed-in user', async () => {
-    mockApi({ 'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }) })
+    mockApi({
+      'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }),
+      'GET /v1/account/activity': emptyActivity,
+    })
 
     renderApp('/dashboard')
 
@@ -29,7 +32,10 @@ describe('protected routes', () => {
   })
 
   it('keeps a signed-in user out of the sign-in page', async () => {
-    mockApi({ 'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }) })
+    mockApi({
+      'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }),
+      'GET /v1/account/activity': emptyActivity,
+    })
 
     const { router } = renderApp('/login')
 
@@ -41,6 +47,7 @@ describe('protected routes', () => {
     mockApi({
       'GET /v1/auth/me': () =>
         jsonResponse({ data: { ...sampleUser, email_verified: false, email_verified_at: null } }),
+      'GET /v1/account/activity': emptyActivity,
     })
 
     renderApp('/dashboard')
@@ -56,6 +63,7 @@ describe('sign in', () => {
     document.cookie = 'XSRF-TOKEN=token'
     mockApi({
       'GET /v1/auth/me': signedOut,
+      'GET /v1/account/activity': emptyActivity,
       'POST /v1/auth/login': (init) => {
         expect(JSON.parse(String(init?.body))).toEqual({
           email: 'ada@example.com',
@@ -106,12 +114,14 @@ describe('sign out', () => {
     document.cookie = 'XSRF-TOKEN=token'
     const calls = mockApi({
       'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }),
+      'GET /v1/account/activity': emptyActivity,
       'POST /v1/auth/logout': () => new Response(null, { status: 204 }),
     })
     const user = userEvent.setup()
 
     const { router } = renderApp('/dashboard')
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }))
+    await user.click(await screen.findByRole('button', { name: /Account menu/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     expect(calls).toContain('POST /v1/auth/logout')

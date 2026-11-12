@@ -113,6 +113,23 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
 - **Web**: sign in, register, forgot/reset password, email verification, protected routes, profile
   (details, password, activity, delete account).
 
+## Phase 3: dashboard UI
+
+- **Shell**: sidebar (Dashboard, Create Video, Connected Accounts, My Videos, Publishing History,
+  Scheduled Posts, Analytics, Settings), header with theme switch, notifications and user menu, and a
+  focus-trapped drawer on phones. Light, dark and system themes (`data-theme` on `<html>`, saved in
+  `localStorage`), Lucide icons, toasts, loading skeletons, empty and error states.
+- **Real API data**: the signed-in user, account activity, profile, password change and account
+  deletion (Settings), sign-out.
+- **Temporary placeholders** (no backend endpoints yet, each labelled "Sample data" or "Preview" in the
+  UI): dashboard statistics, recent projects and videos, connected accounts, publishing activity,
+  notifications, notification preferences, and the six feature pages (Create Video, Connected
+  Accounts, My Videos, Publishing History, Scheduled Posts, Analytics), which show a "Coming soon"
+  empty state. All placeholder content lives in `apps/web/src/features/dashboard/data/` and
+  `features/placeholders/`; replace a hook in `useSample.ts` with an `apiFetch` call when its
+  endpoint ships and the components stay unchanged.
+- `/profile` now redirects to `/settings`.
+
 ## Deviations from the Phase 0 docs
 
 - Phase 2 ownership is per **user** (`user_id` on every record), not per workspace; workspaces can be

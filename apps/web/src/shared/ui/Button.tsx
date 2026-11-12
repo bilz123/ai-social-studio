@@ -1,22 +1,16 @@
 import type { ButtonHTMLAttributes } from 'react'
-import { cn } from '@/shared/lib/cn'
-
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
-
-const variants: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-contrast hover:bg-brand-hover',
-  secondary: 'border border-line bg-raised text-ink hover:bg-sunken',
-  danger: 'bg-danger text-surface hover:opacity-90',
-  ghost: 'text-ink hover:bg-sunken',
-}
+import { buttonClasses } from './buttonStyles'
+import type { ButtonSize, ButtonVariant } from './buttonStyles'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
+  variant?: ButtonVariant
+  size?: ButtonSize
   loading?: boolean
 }
 
 export function Button({
   variant = 'primary',
+  size = 'md',
   loading = false,
   disabled,
   className,
@@ -29,12 +23,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(
-        'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-60',
-        variants[variant],
-        className,
-      )}
+      className={buttonClasses(variant, size, className)}
       {...rest}
     >
       {loading && (

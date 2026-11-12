@@ -4,6 +4,8 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { vi } from 'vitest'
 import { routes } from '@/app/router'
 import { AuthProvider } from '@/features/auth/AuthProvider'
+import { ThemeProvider } from '@/shared/theme/ThemeProvider'
+import { ToastProvider } from '@/shared/toast/ToastProvider'
 
 export const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -46,10 +48,22 @@ export function renderApp(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   const view = render(
     <QueryClientProvider client={client}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <RouterProvider router={router} />
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>,
   )
   return { ...view, router }
 }
+
+export const emptyActivity = () => jsonResponse({ data: [] })
+
+/** Handlers every signed-in screen needs (who am I + the account activity list). */
+export const signedInHandlers = (): Record<string, Handler> => ({
+  'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }),
+  'GET /v1/account/activity': emptyActivity,
+})
