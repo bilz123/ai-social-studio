@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuthenticateWebSession;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
-use App\Http\Middleware\AuthenticateWebSession;
 
 return [
 
