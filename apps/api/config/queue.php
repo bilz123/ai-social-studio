@@ -21,16 +21,14 @@ return [
 
     ],
 
-    // Job batches and failed-job storage need database tables that arrive with the first
-    // migrations (Phase 1). Until then failed jobs are discarded ("null" driver); switch
-    // QUEUE_FAILED_DRIVER to "database-uuids" once the failed_jobs table exists.
+    // Failed jobs are stored in the failed_jobs table (created by the Phase 2 migrations).
     'batching' => [
         'database' => env('DB_CONNECTION', 'mysql'),
         'table' => 'job_batches',
     ],
 
     'failed' => [
-        'driver' => env('QUEUE_FAILED_DRIVER', 'null'),
+        'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
         'database' => env('DB_CONNECTION', 'mysql'),
         'table' => 'failed_jobs',
     ],

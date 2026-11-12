@@ -33,5 +33,10 @@
         <env name="CORS_ALLOWED_ORIGINS" value="http://localhost:5173" force="true"/>
         <env name="TRUSTED_PROXIES" value="" force="true"/>
         <env name="API_RATE_LIMIT_PER_MINUTE" value="1000" force="true"/>
+        <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="FRONTEND_URL" value="http://localhost:8080" force="true"/>
+        <env name="AUTH_CHECK_BREACHED_PASSWORDS" value="false" force="true"/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost:8080" force="true"/>
     </php>
 </phpunit>

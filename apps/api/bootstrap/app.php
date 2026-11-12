@@ -30,6 +30,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global so even unmatched routes (404) and CORS preflights carry a request id.
         $middleware->prepend(AssignRequestId::class);
 
+        // Sanctum SPA mode: requests from the SPA origin (SANCTUM_STATEFUL_DOMAINS) get the cookie
+        // session and CSRF protection; everything else stays stateless.
+        $middleware->statefulApi();
+
         $middleware->throttleApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {

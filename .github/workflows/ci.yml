@@ -14,18 +14,58 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: ci-password
+          MYSQL_ROOT_PASSWORD: ci-root-password
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uci -pci-password --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: pdo_sqlite, redis, intl, bcmath, zip
+          extensions: pdo_sqlite, pdo_mysql, redis, intl, bcmath, zip
           coverage: none
       - run: composer install --no-interaction --prefer-dist
       - run: composer lint
       # Run tests even when style checks fail, so one push reports every problem.
       - run: php artisan test
         if: ${{ !cancelled() }}
+      # The test suite runs on SQLite; this proves the migrations on the real engine (MySQL 8.4),
+      # including foreign keys, CHECK constraints, rollback and re-migration, plus Redis health.
+      - name: Migrate on MySQL (up, down, up) and check service health
+        if: ${{ !cancelled() }}
+        env:
+          APP_ENV: ci
+          APP_KEY: base64:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: ci
+          DB_USERNAME: ci
+          DB_PASSWORD: ci-password
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          HEALTH_CHECK_REDIS: "true"
+          LOG_CHANNEL: stderr
+        run: |
+          php artisan migrate --force
+          php artisan db:seed --force
+          php artisan migrate:rollback --force --step=20
+          php artisan migrate --force
+          php artisan health:check
 
   web:
     runs-on: ubuntu-latest

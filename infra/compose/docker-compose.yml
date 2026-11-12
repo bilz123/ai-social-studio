@@ -7,9 +7,9 @@
 # Network layout (who can talk to whom):
 #   edge     nginx <-> web                      browser-facing side
 #   backend  nginx, api, queue, scheduler,      application traffic; outbound internet allowed
-#            ai-api
+#            ai-api, mailpit
 #   data     mysql, redis + their clients       INTERNAL network: no route to/from the internet
-# The only published port is the nginx gateway, bound to 127.0.0.1. MySQL, Redis and the AI
+# Published ports (all loopback-only): the nginx gateway, and the dev mail inbox (Mailpit). MySQL, Redis and the AI
 # service are never reachable from the host or the outside.
 
 name: ai-social-studio
@@ -31,6 +31,13 @@ x-api-env: &api-env
   LOG_LEVEL: ${LOG_LEVEL:-info}
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+  SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080,localhost:5173,127.0.0.1:8080}
+  AUTH_CHECK_BREACHED_PASSWORDS: ${AUTH_CHECK_BREACHED_PASSWORDS:-false}
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@studio.test}
   DB_CONNECTION: mysql
   DB_HOST: mysql
   DB_PORT: "3306"
@@ -181,6 +188,21 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    restart: unless-stopped
+    logging: *default-logging
+
+  # --- Development mail catcher: every email the app sends lands here, nothing leaves ---------
+  # Inbox UI on http://127.0.0.1:8025 (loopback only). Never use in production.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
     logging: *default-logging
 
