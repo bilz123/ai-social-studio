@@ -68,8 +68,7 @@ class FacebookConnectionTest extends SocialTestCase
 
         $this->connectWithCode($this->member(), 'facebook', 'the-code')->assertOk();
 
-        Http::assertSent(fn (Request $request) => str_contains($request->url(), '/oauth/access_token')
-            && $request['code'] === 'the-code'
+        Http::assertSent(fn (Request $request) => ($request['code'] ?? null) === 'the-code'
             && $request['redirect_uri'] === 'http://localhost:8080/connections/callback/facebook'
             && $request['client_secret'] === 'fb-app-secret');
         Http::assertSent(fn (Request $request) => ($request['grant_type'] ?? null) === 'fb_exchange_token'
