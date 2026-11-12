@@ -1,0 +1,752 @@
+{
+  "components": {
+    "schemas": {
+      "Benefit": {
+        "properties": {
+          "evidence": {
+            "description": "The sentence of the description it came from.",
+            "title": "Evidence",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rank",
+          "text",
+          "evidence"
+        ],
+        "title": "Benefit",
+        "type": "object"
+      },
+      "CheckResult": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CheckResult",
+        "type": "object"
+      },
+      "DescribeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageHint"
+            },
+            "maxItems": 10,
+            "title": "Images",
+            "type": "array"
+          },
+          "language": {
+            "default": "en",
+            "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+            "title": "Language",
+            "type": "string"
+          },
+          "negative_prompt_terms": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Negative Prompt Terms",
+            "type": "array"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "style_preset": {
+            "anyOf": [
+              {
+                "enum": [
+                  "cinematic_dolly",
+                  "orbit_showcase",
+                  "parallax_lifestyle",
+                  "macro_reveal",
+                  "minimal_studio"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Preset"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "enum": [
+                  "luxury",
+                  "playful",
+                  "energetic",
+                  "calm",
+                  "professional",
+                  "friendly"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          },
+          "use_llm": {
+            "default": true,
+            "title": "Use Llm",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "DescribeRequest",
+        "type": "object"
+      },
+      "DescribeResponse": {
+        "properties": {
+          "benefits": {
+            "items": {
+              "$ref": "#/components/schemas/Benefit"
+            },
+            "title": "Benefits",
+            "type": "array"
+          },
+          "call_to_action": {
+            "title": "Call To Action",
+            "type": "string"
+          },
+          "claims_to_review": {
+            "description": "Statements that need a human check before publishing (superlatives, health).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Claims To Review",
+            "type": "array"
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/VideoPrompt"
+            },
+            "title": "Prompts",
+            "type": "array"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/Scene"
+            },
+            "title": "Scenes",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "rules",
+              "llm"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "style_preset": {
+            "enum": [
+              "cinematic_dolly",
+              "orbit_showcase",
+              "parallax_lifestyle",
+              "macro_reveal",
+              "minimal_studio"
+            ],
+            "title": "Style Preset",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "timeline": {
+            "$ref": "#/components/schemas/Timeline"
+          },
+          "tone": {
+            "enum": [
+              "luxury",
+              "playful",
+              "energetic",
+              "calm",
+              "professional",
+              "friendly"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "summary",
+          "product",
+          "benefits",
+          "features",
+          "keywords",
+          "tone",
+          "call_to_action",
+          "claims_to_review",
+          "style_preset",
+          "timeline",
+          "scenes",
+          "prompts"
+        ],
+        "title": "DescribeResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImageHint": {
+        "description": "What the Image Analyzer said about one image (only the fields the planner needs).",
+        "properties": {
+          "media_id": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Media Id",
+            "type": "string"
+          },
+          "quality_score": {
+            "default": 0.5,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Quality Score",
+            "type": "number"
+          },
+          "shot_type": {
+            "default": "front",
+            "enum": [
+              "front",
+              "detail",
+              "lifestyle",
+              "flat"
+            ],
+            "title": "Shot Type",
+            "type": "string"
+          },
+          "usable_as_first_frame": {
+            "default": true,
+            "title": "Usable As First Frame",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "media_id"
+        ],
+        "title": "ImageHint",
+        "type": "object"
+      },
+      "LiveResponse": {
+        "properties": {
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "version"
+        ],
+        "title": "LiveResponse",
+        "type": "object"
+      },
+      "ProductHint": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "colors": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "title": "Colors",
+            "type": "array"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Materials",
+            "type": "array"
+          }
+        },
+        "title": "ProductHint",
+        "type": "object"
+      },
+      "ProductSummary": {
+        "properties": {
+          "audience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "colors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "materials",
+          "colors"
+        ],
+        "title": "ProductSummary",
+        "type": "object"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "checks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CheckResult"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "ReadyResponse",
+        "type": "object"
+      },
+      "Scene": {
+        "properties": {
+          "camera_move": {
+            "title": "Camera Move",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "lighting": {
+            "title": "Lighting",
+            "type": "string"
+          },
+          "overlay_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short on-screen text, or null.",
+            "title": "Overlay Text"
+          },
+          "source_media_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Media Id"
+          },
+          "start_seconds": {
+            "title": "Start Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "index",
+          "start_seconds",
+          "duration_seconds",
+          "source_media_id",
+          "camera_move",
+          "lighting",
+          "description",
+          "overlay_text"
+        ],
+        "title": "Scene",
+        "type": "object"
+      },
+      "Timeline": {
+        "properties": {
+          "crossfade_seconds": {
+            "title": "Crossfade Seconds",
+            "type": "number"
+          },
+          "scene_count": {
+            "title": "Scene Count",
+            "type": "integer"
+          },
+          "strategy": {
+            "enum": [
+              "two_images",
+              "one_image",
+              "description_only"
+            ],
+            "title": "Strategy",
+            "type": "string"
+          },
+          "total_duration_seconds": {
+            "title": "Total Duration Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "strategy",
+          "total_duration_seconds",
+          "crossfade_seconds",
+          "scene_count"
+        ],
+        "title": "Timeline",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VideoPrompt": {
+        "properties": {
+          "duration_seconds": {
+            "description": "Length used in the final video.",
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "media_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Id"
+          },
+          "negative_prompt": {
+            "title": "Negative Prompt",
+            "type": "string"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "request_seconds": {
+            "description": "Length to ask the provider for (a little extra).",
+            "title": "Request Seconds",
+            "type": "number"
+          },
+          "scene_index": {
+            "title": "Scene Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scene_index",
+          "media_id",
+          "prompt",
+          "negative_prompt",
+          "duration_seconds",
+          "request_seconds"
+        ],
+        "title": "VideoPrompt",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "AI Social Studio - Description Analyzer",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/describe": {
+      "post": {
+        "operationId": "describe_v1_describe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescribeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Describe",
+        "tags": [
+          "description-analyzer"
+        ]
+      }
+    }
+  }
+}

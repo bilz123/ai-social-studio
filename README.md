@@ -3,8 +3,9 @@
 Create cinematic 10-second product videos from images and a description, approve them, and publish
 to Facebook, Instagram and YouTube.
 
-This repository is at **Phase 5**: accounts, the dashboard, social connections and the Create Video
-module (project drafts with product images) work. Video generation and publishing come next.
+This repository is at **Phase 6**: accounts, the dashboard, social connections, the Create Video
+module (project drafts with product images) and the five Python AI microservices exist. Laravel does not
+call the AI services yet, so video generation from the UI and publishing come next.
 Design lives in [`docs/`](docs/) (start with
 [`PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) and
 [`DEVELOPMENT_ROADMAP.md`](docs/DEVELOPMENT_ROADMAP.md)).
@@ -167,6 +168,19 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
   generated names; thumbnails are separate JPEGs; files are reachable only through temporary signed links.
 - **Needs** the PHP `gd` and `exif` extensions (added to the Docker image and CI).
 
+## Phase 6: Python AI microservices
+
+Five independent, private FastAPI services under `services/` (shared library: `services/common`):
+`image-analyzer`, `description-analyzer`, `video-generator`, `video-renderer`, `video-optimizer`.
+Contracts: [`contracts/ai/*.openapi.json`](contracts/ai/) and `docs/AI_MICROSERVICES.md` §12.
+
+- **Run the tests (no Docker):** `pip install -e "services/common[dev]" -e services/<name>[dev]` then
+  `make test-ai` (needs `ffmpeg` and `fonts-dejavu-core`; real FFmpeg is used on synthetic media).
+- **Compose:** `ai-image-analyzer`, `ai-description-analyzer`, `ai-video-generator`, `ai-video-renderer`,
+  `ai-video-optimizer`, one shared `ai-media` volume, no published ports. Set provider/vision/LLM keys only in
+  your own `.env` (see `.env.example`); the `fake` video provider is for local use and refused in production.
+- **Not wired to Laravel yet** (Phase 7). Known limits are listed in `docs/AI_MICROSERVICES.md` §12.9.
+
 ## Deviations from the Phase 0 docs
 
 - Phase 2 ownership is per **user** (`user_id` on every record), not per workspace; workspaces can be
@@ -187,6 +201,8 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
 - Packagist was unreachable from the authoring environment, so PHPUnit and Pint run in GitHub
   Actions (tests on SQLite, plus a migrate up/down/up and seed against MySQL 8.4 and Redis). Run
   `make install && make test-api && make lint-api` locally as well.
+- The Phase 6 service images were not built (no Docker daemon); a clean `pip install` and `uvicorn` start of
+  each service was verified instead.
 - The full Docker stack and MySQL connectivity were not run in the authoring environment (no Docker
   daemon). Compose config is validated; first `make up` is the real test.
 - No `composer.lock` yet; it is created by the first `make install` and should then be committed.

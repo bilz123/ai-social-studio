@@ -68,6 +68,30 @@ x-api-env: &api-env
   UPLOADS_MAX_MB: ${UPLOADS_MAX_MB:-10}
   UPLOADS_MAX_IMAGES: ${UPLOADS_MAX_IMAGES:-10}
 
+x-ai-service-env: &ai-service-env
+  AI_ENVIRONMENT: ${AI_ENVIRONMENT:-local}
+  AI_LOG_LEVEL: ${LOG_LEVEL:-info}
+  AI_HMAC_SECRET_LARAVEL_TO_AI: ${AI_HMAC_SECRET_LARAVEL_TO_AI:?AI_HMAC_SECRET_LARAVEL_TO_AI is empty - run `make init`}
+  AI_STORAGE_BACKEND: ${AI_STORAGE_BACKEND:-local}
+  AI_STORAGE_LOCAL_ROOT: /data/media
+  AI_S3_ENDPOINT: ${AI_S3_ENDPOINT:-}
+  AI_S3_BUCKET: ${AI_S3_BUCKET:-}
+  AI_S3_REGION: ${AI_S3_REGION:-us-east-1}
+  AI_S3_ACCESS_KEY: ${AI_S3_ACCESS_KEY:-}
+  AI_S3_SECRET_KEY: ${AI_S3_SECRET_KEY:-}
+  # Job state: the shared Redis, logical DB 2 (Laravel uses DB 0 and 1). Each service keys its own prefix.
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is empty - run `make init`}@redis:6379/2
+
+x-ai-service: &ai-service
+  restart: unless-stopped
+  logging: *default-logging
+  networks: [backend, data]
+  depends_on:
+    redis:
+      condition: service_healthy
+  volumes:
+    - ai-media:/data/media
+
 x-api-build: &api-build
   context: ../..
   dockerfile: infra/docker/api/Dockerfile
@@ -203,6 +227,82 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
+  # --- Phase 6 AI microservices (all private: no published ports, not routed by nginx) -------
+  # Laravel calls them over the backend network with signed requests (wired up in Phase 7).
+  ai-image-analyzer:
+    <<: *ai-service
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai-services/Dockerfile
+      args:
+        SERVICE: image-analyzer
+        PACKAGE: image_analyzer
+        FFMPEG: "false"
+    environment:
+      <<: *ai-service-env
+      # Optional OpenAI-compatible vision model. Empty = heuristics only.
+      AI_VISION_BASE_URL: ${AI_VISION_BASE_URL:-}
+      AI_VISION_MODEL: ${AI_VISION_MODEL:-}
+      AI_VISION_API_KEY: ${AI_VISION_API_KEY:-}
+
+  ai-description-analyzer:
+    <<: *ai-service
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai-services/Dockerfile
+      args:
+        SERVICE: description-analyzer
+        PACKAGE: description_analyzer
+        FFMPEG: "false"
+    environment:
+      <<: *ai-service-env
+      # Optional OpenAI-compatible language model. Empty = rule-based planning only.
+      AI_LLM_BASE_URL: ${AI_LLM_BASE_URL:-}
+      AI_LLM_MODEL: ${AI_LLM_MODEL:-}
+      AI_LLM_API_KEY: ${AI_LLM_API_KEY:-}
+
+  ai-video-generator:
+    <<: *ai-service
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai-services/Dockerfile
+      args:
+        SERVICE: video-generator
+        PACKAGE: video_generator
+        FFMPEG: "true"
+    environment:
+      <<: *ai-service-env
+      # Provider credentials are never committed: leave empty until you have a provider account.
+      # "fake" is for local development only and is refused when AI_ENVIRONMENT is staging/production.
+      AI_VIDEO_PROVIDER_PRIMARY: ${AI_VIDEO_PROVIDER_PRIMARY:-fake}
+      AI_VIDEO_PROVIDER_FALLBACK: ${AI_VIDEO_PROVIDER_FALLBACK:-}
+      AI_VIDEO_HTTP_BASE_URL: ${AI_VIDEO_HTTP_BASE_URL:-}
+      AI_VIDEO_HTTP_API_KEY: ${AI_VIDEO_HTTP_API_KEY:-}
+      AI_VIDEO_HTTP_DOWNLOAD_HOSTS: ${AI_VIDEO_HTTP_DOWNLOAD_HOSTS:-}
+
+  ai-video-renderer:
+    <<: *ai-service
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai-services/Dockerfile
+      args:
+        SERVICE: video-renderer
+        PACKAGE: video_renderer
+        FFMPEG: "true"
+    environment:
+      <<: *ai-service-env
+  ai-video-optimizer:
+    <<: *ai-service
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai-services/Dockerfile
+      args:
+        SERVICE: video-optimizer
+        PACKAGE: video_optimizer
+        FFMPEG: "true"
+    environment:
+      <<: *ai-service-env
+
   # --- Development mail catcher: every email the app sends lands here, nothing leaves ---------
   # Inbox UI on http://127.0.0.1:8025 (loopback only). Never use in production.
   mailpit:
@@ -265,5 +365,6 @@ networks:
 
 volumes:
   mysql_data:
+  ai-media:
   redis_data:
   web_node_modules:

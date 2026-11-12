@@ -110,6 +110,48 @@ jobs:
         env:
           REDIS_URL: redis://localhost:6379/2
 
+  ai-services:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: common, package: studio_common }
+          - { service: image-analyzer, package: image_analyzer }
+          - { service: description-analyzer, package: description_analyzer }
+          - { service: video-generator, package: video_generator }
+          - { service: video-renderer, package: video_renderer }
+          - { service: video-optimizer, package: video_optimizer }
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install FFmpeg and a font (real-media tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
+      - run: pip install -e ../common[dev]
+      - run: pip install -e ".[dev]"
+        if: matrix.service != 'common'
+      - run: ruff check .
+      - run: ruff format --check .
+      - name: Type check
+        run: mypy ${{ matrix.package }}
+      - run: pytest
+
+  ai-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ./services/common ./services/image-analyzer ./services/description-analyzer ./services/video-generator ./services/video-renderer ./services/video-optimizer
+      - name: OpenAPI contracts match the code
+        run: python scripts/export-ai-openapi.py --check
+
   compose:
     runs-on: ubuntu-latest
     steps:

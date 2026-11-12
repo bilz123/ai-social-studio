@@ -192,3 +192,159 @@ Structured logs with `generation_id`, `ai_job_id`, `stage`, `provider`; metrics:
 3. **GPU self-hosting complexity** → deferred to Phase 7, only if provider cost justifies.
 4. **Copyright/licensing** of music and of user-supplied imagery → license-vetted library only; ToS puts rights responsibility on the user.
 5. **Safety/policy** (faces, brands, harmful content) → pre/post moderation and clear rejection messages.
+
+---
+
+# 12. Phase 6 as-built: five independent services
+
+> This section describes what was actually built in Phase 6 and **supersedes sections 2 and 3 where they differ**
+> (the original design assumed one image with three commands; the build is five separate services).
+> Machine-readable contracts (OpenAPI 3.1) are in [`contracts/ai/`](../contracts/ai/); regenerate with
+> `python scripts/export-ai-openapi.py` (CI fails if they drift from the code). Laravel does not call these
+> services yet: that wiring is Phase 7.
+
+## 12.1 Layout and runtime
+
+| Service | Package | Compose name | What it does | Needs FFmpeg |
+| --- | --- | --- | --- | --- |
+| Image Analyzer | `image_analyzer` | `ai-image-analyzer` | Reads product photos (never modifies them), identifies the product, extracts colours, background, subject, shot type, quality and risks | no |
+| Description Analyzer | `description_analyzer` | `ai-description-analyzer` | Turns the product description into ranked benefits, a 10 s scene timeline and structured provider prompts | no |
+| Video Generator | `video_generator` | `ai-video-generator` | Provider abstraction for image-to-video; tracks provider job IDs, retries, timeouts, cost budget | yes (clip QA) |
+| Video Renderer | `video_renderer` | `ai-video-renderer` | FFmpeg: zoom, crossfade, text, logo, music, MP4 master | yes |
+| Video Optimizer | `video_optimizer` | `ai-video-optimizer` | Size control, aspect-ratio exports, thumbnails, final validation | yes |
+
+Shared code lives in `services/common` (package `studio_common`): settings, errors, logging, HMAC middleware,
+storage, job manager, FFmpeg helpers, health routes. Each service has its own `pyproject.toml`, tests and image
+(`infra/docker/ai-services/Dockerfile`, build args `SERVICE`, `PACKAGE`, `FFMPEG`). Start any one with
+`uvicorn --factory <package>.main:create_app`. In Compose every service listens on port 8000 **inside** the
+private `backend`/`data` networks; none publishes a port and nginx routes none of them. The legacy `services/ai`
+skeleton (`ai-api`) is untouched and will be retired in Phase 7.
+
+## 12.2 Conventions shared by all five services
+
+- **Auth.** Every request except `/healthz`, `/readyz` must carry the Laravel HMAC signature
+  (`AI_HMAC_SECRET_LARAVEL_TO_AI`; mandatory outside `local`/`testing`, startup fails without it). Missing or invalid: `401`.
+- **Errors.** `application/problem+json` (RFC 9457) with an extra stable `code`. Messages never include
+  FFmpeg stderr, provider bodies, keys or file paths. Validation failures are `422` with per-field detail.
+- **Media never travels in request bodies.** Requests carry storage keys (`videos/…`, no `..`, no hidden or empty
+  parts). Body limit 256 KB (`AI_MAX_BODY_BYTES`).
+- **Async jobs.** `POST` returns `202` with a job (`id`, `status`: queued | running | succeeded | failed | canceled,
+  `stage`, `progress` 0–1, `result`, `error{code,message,retryable}`); repeating a request with the same
+  `idempotency_key` returns `200` and the same job. `GET …/{id}` polls, `POST …/{id}/cancel` stops work. State is kept in
+  Redis (DB 2) for `AI_JOB_TTL_SECONDS` (7 days). A restart marks in-flight jobs `failed` (`retryable: true`); the caller resubmits.
+- **Health.** `GET /healthz` (liveness, no dependencies) and `GET /readyz` (storage, job store, plus `ffmpeg`
+  / `font` where relevant; `503` when a check fails).
+- **Logging.** One JSON object per line on stdout with `timestamp, level, service, logger, message, request_id`;
+  the request ID is accepted from `X-Request-Id` or generated and returned.
+- **Credentials.** All provider, model and storage keys come from environment variables (`AI_*`), are `SecretStr`,
+  travel only in `Authorization` headers and are never logged. `.env.example` lists every variable with empty values.
+
+## 12.3 Image Analyzer: `POST /v1/analyze` (sync)
+
+Request: `images[1..10]{media_id, storage_key}`, `brief{title, description}` (optional), `use_vision` (default false).
+Response: `images[]` (per image: `media_id, width, height, aspect_ratio, format, sha256`, `quality{score, sharpness, brightness, contrast}`,
+`colors[{name, hex, share}]`, `background{kind: white|solid|complex, hex}`, `subject{box, coverage, centered}`,
+`shot_type` front | detail | lifestyle | flat, `usable_as_first_frame`, `risks[]`), `product` (`name, category, colors, materials,
+key_features, visible_text, has_logo, has_people, confidence`, `source`: `heuristic` | `vision`), `preservation` and `warnings[]`.
+
+`preservation` is the contract that protects the product's look: `original_modified` is always `false` (a literal in the schema), `hero_media_id` is
+the best first frame, `must_preserve[]` lists shape/colour/logo constraints and `negative_prompt_terms[]` is appended to every
+generation prompt. Originals are opened read-only. Vision (optional, `AI_VISION_BASE_URL/MODEL/API_KEY`, any
+OpenAI-compatible endpoint) output is validated, clamped and stripped of URLs before use. Errors: `too_many_images`,
+`duplicate_media_id`, `image_empty`, `image_too_large`, `image_dimensions_too_large`, `image_unsupported_type`, `media_not_found`.
+
+## 12.4 Description Analyzer: `POST /v1/describe` (sync)
+
+Request: `title`, `description` (1–2000 chars), `product` hint (`category, colors, materials`), `images[≤10]` hints from the image
+analysis (`media_id, quality_score, shot_type, usable_as_first_frame`), `language`, `tone` (luxury | playful | energetic | calm |
+professional | friendly), `style_preset` (`cinematic_dolly`, `orbit_showcase`, `parallax_lifestyle`, `macro_reveal`, `minimal_studio`),
+`negative_prompt_terms` (from `preservation`), `use_llm`.
+Response: `summary`, `product`, `benefits[]` (`rank, text, evidence`), `features[]`, `keywords[]`, `tone`, `call_to_action`,
+`claims_to_review[]` (superlatives, medical, price and guarantee claims for a human to confirm), `style_preset`, `timeline`
+(`strategy`: `two_images` | `one_image` | `description_only`, `total_duration_seconds` 10.0, `crossfade_seconds` 1.0, `scene_count`),
+`scenes[]` (`index, start_seconds` 0 and 4.5, `duration_seconds` 5.5, `description, camera_move, lighting, overlay_text,
+source_media_id`), `prompts[]` (`scene_index, media_id, prompt, negative_prompt, duration_seconds, request_seconds`),
+`source` (`rules` | `llm`) and `warnings[]`.
+
+Ten seconds = two 5.5 s shots with a 1.0 s overlap (`5.5 + 5.5 − 1.0`); provider requests are padded by 0.5 s so the
+renderer can trim. With an optional LLM (`AI_LLM_*`) the text is refined, but model output is schema-validated and falls back
+to the rule-based plan on any problem. User text is treated as data, never as instructions to the model.
+
+## 12.5 Video Generator: `POST /v1/generations` (async)
+
+Request: `idempotency_key`, `output_prefix`, `shots[1..4]{shot_id, image_key, prompt, negative_prompt, duration_seconds,
+request_seconds}`, `aspect_ratio` (`9:16` default | `1:1` | `16:9`), `provider` (optional override, must be configured),
+`max_cost_cents`, `seed`, `timeline{total_duration_seconds, crossfade_seconds}`. Result: `clips[]{shot_id, storage_key, provider,
+provider_job_id, duration_seconds, width, height, cost_cents, attempts}`, `attempted_provider_jobs[]`, `total_cost_cents`. While running,
+`GET /v1/generations/{id}` also returns `shots[]{state, provider, provider_job_id, attempts, error_code}` so progress and external
+job IDs are visible live. `GET /v1/providers` lists configured providers (`name, role, max_seconds, aspect_ratios, cost_cents_per_second`; no secrets).
+
+Provider interface (`providers/base.py`): `submit(request) → ProviderJob`, `poll(job) → ProviderStatus`, `fetch(job, status, destination)`, `cancel(job)`,
+plus `capabilities` (max seconds, aspect ratios, cost per second). Adapters: `fake` (deterministic synthetic clip with FFmpeg;
+**refused in staging/production**) and `http` (a generic REST adapter; its contract is documented in `providers/http.py`, and a vendor-specific
+adapter is a small subclass). Behaviour: primary → fallback chain, bounded retries, exponential-backoff polling, a per-clip
+timeout that **cancels the external job**, a circuit breaker per provider, a cost budget checked before every submit, and a
+clip QA step (ffprobe: decodes, duration, resolution). Every external job ID, including abandoned attempts, is recorded so Laravel can
+reconcile with the vendor. Download URLs must be `https`, must not resolve to private/loopback addresses, and can be pinned to hosts with
+`AI_VIDEO_HTTP_DOWNLOAD_HOSTS`. Errors (in `error.code`): `provider_rejected` (fails fast, not retried), `provider_unavailable`,
+`provider_auth_failed`, `timeout`, `cost_limit_exceeded`, `qa_failed`, `unknown_provider`, `unsupported_aspect_ratio`.
+
+## 12.6 Video Renderer: `POST /v1/renders` (async)
+
+Request: `output_key` (`.mp4`), `aspect_ratio` (`9:16` | `1:1` | `16:9`), `resolution` (`full` 1080×1920 | `preview` half), `fps`,
+`duration_seconds` (must equal `sum(segments) − transition × (n−1)`), `quality` (`draft` | `standard` | `high`),
+`segments[]` (`kind` `clip` | `image`, `key`, `duration_seconds`, `zoom{style: in|out|none, amount, focus_x, focus_y}`),
+`transition` (whitelisted `xfade` type, duration), `grade`, `overlays[≤4]` (text, start, end, position, size, `#rrggbb`), `logo`
+(`key`, corner, width, opacity), `music` (`key`, volume, fades, loudness normalisation, loop).
+Result: `output_key, size_bytes, duration_seconds, width, height, fps, has_audio`.
+
+Output is H.264 High, yuv420p, 30 fps, AAC 48 kHz stereo, `+faststart`. Overlays stay inside the platform safe zones (top 9 %,
+bottom 15 %). The filter graph is built by a pure function (`graph.build_plan`) and unit-tested. Security: every FFmpeg input is
+opened with `-protocol_whitelist file` (so a crafted playlist cannot reach the network), formats/codecs are allow-listed, text is
+passed through a text file with `expansion=none` (never inside the filter string), colours are validated, and text in scripts that
+FFmpeg cannot shape (Arabic, Urdu, Devanagari, …) is refused with `unsupported_text_script`; use an image overlay for those.
+Errors: `unsupported_input`, `input_too_large`, `input_too_long`, `clip_too_short`, `music_too_short`, `too_many_segments`,
+`unsupported_text_script`, `media_not_found`, `postprocess_failed`.
+
+## 12.7 Video Optimizer: `/v1/validate` (sync), `/v1/optimizations` (async)
+
+`POST /v1/validate` `{video_key, profile, expected_duration_seconds?, deep?}` → `{valid, profile, checks[], facts}`. Each check
+has `name, passed, severity (error|warning), expected, actual`. Checks: container MP4, H.264, `yuv420p`, AAC, 48 kHz, stereo,
+faststart (`moov` before `mdat`), frame rate 23–60, duration range for the profile, optional expected duration (±0.1 s), aspect ratio
+(9:16 profiles), file size, even dimensions; `deep: true` adds `black_frames` and `frozen_frames` (warnings only, because a dark
+scene can be intentional). Profiles: `master`, `instagram_reels`, `facebook_reels`, `youtube_shorts`, `youtube_video`. The numbers
+in each profile are **our conservative delivery targets, not the platforms' published maxima**; review them against each platform's
+current documentation before launch.
+
+`POST /v1/optimizations` `{idempotency_key, video_key, output_prefix, outputs[1..6], thumbnails}`; each output has `name`,
+`aspect_ratio` (`9:16`, `1:1`, `4:5`, `16:9`), `mode` (`crop` with `focus_x`, or `pad_blur`: whole picture over a blurred copy),
+`crf`, `preset`, `max_size_mb`, optional `profile` to validate against. Size control: encode at CRF; if the file is over the target,
+re-encode with a bit-rate derived from the target (up to 3 attempts), otherwise fail with `size_target_unreachable`. Thumbnails: the
+sharpest of N sampled frames (or `at_seconds`), cropped to each requested ratio, written as JPEG. Output files are stored at
+`{output_prefix}/{name}.mp4` and `{output_prefix}/{name}.jpg`. An output that fails its profile is **not stored** and the job fails with
+`output_invalid`. Errors: `unsupported_input`, `input_too_large`, `input_too_long`, `input_too_short`, `too_many_outputs`,
+`size_target_unreachable`, `output_invalid`, `media_not_found`.
+
+## 12.8 Configuration summary
+
+| Variable | Used by | Notes |
+| --- | --- | --- |
+| `AI_ENVIRONMENT` | all | `local` / `testing` / `staging` / `production` |
+| `AI_HMAC_SECRET_LARAVEL_TO_AI` | all | required outside local; generated by `make init` |
+| `REDIS_URL` | all | job state; Compose uses Redis DB 2 |
+| `AI_STORAGE_BACKEND`, `AI_STORAGE_LOCAL_ROOT`, `AI_S3_*` | all | shared media; `local` = the `ai-media` volume |
+| `AI_VISION_*` | image analyzer | optional vision model |
+| `AI_LLM_*` | description analyzer | optional language model |
+| `AI_VIDEO_PROVIDER_PRIMARY/FALLBACK`, `AI_VIDEO_HTTP_*` | generator | provider selection and credentials |
+| `AI_MAX_CONCURRENT_JOBS` | async services | default 2 |
+
+## 12.9 Testing and known limits
+
+Each package has its own suite (`make test-ai`): common 35, image analyzer 28, description analyzer 29, video generator 46,
+video renderer 38, video optimizer 18. Renderer and optimizer tests run real FFmpeg on synthetic media and inspect the output with
+ffprobe and pixel comparisons. Known limits: the S3 storage backend and the vision/LLM/HTTP-provider paths are covered by mocks only
+(no live account was available); no vendor-specific provider adapter ships yet; jobs execute in-process, so a crash loses the running
+attempt (it is marked failed and must be resubmitted); right-to-left and complex-script text overlays are refused rather than
+rendered badly; there is no embedding-based check that generated motion kept the product identical, only the prompt constraints and
+human preview/approval; the Docker images were validated by an equivalent clean install and run, not built, because the build
+environment had no Docker daemon (CI validates the Compose file syntax only).

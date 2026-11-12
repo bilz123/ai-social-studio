@@ -49,6 +49,8 @@ health: ## Check every service through the public gateway
 	@echo "api ready:"; curl -sS http://127.0.0.1:$(GATEWAY_PORT)/api/v1/health/ready; echo
 	@echo "ai ready (private, via docker network):"; $(COMPOSE) exec -T ai-api python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).read().decode())"
 
+AI_SERVICES := common image-analyzer description-analyzer video-generator video-renderer video-optimizer
+
 test: test-api test-web test-ai ## Run every test suite
 
 test-api: ## Laravel tests (PHPUnit)
@@ -59,6 +61,7 @@ test-web: ## Frontend tests (Vitest), no Docker required
 
 test-ai: ## Python tests (pytest), no Docker required
 	cd services/ai && python -m pytest
+	@for s in $(AI_SERVICES); do (cd services/$$s && python -m pytest -q) || exit 1; done
 
 lint: lint-api lint-web lint-ai ## Lint everything
 
@@ -70,6 +73,7 @@ lint-web: ## ESLint + Prettier + TypeScript
 
 lint-ai: ## Ruff + mypy
 	cd services/ai && python -m ruff check . && python -m ruff format --check . && python -m mypy app
+	@for s in $(AI_SERVICES); do (cd services/$$s && python -m ruff check . && python -m ruff format --check . && python -m mypy $$(python -c "import sys;print({'common':'studio_common'}.get('$$s','$$s'.replace('-','_')))")) || exit 1; done
 
 format: ## Auto-format all code
 	cd apps/web && npm run format

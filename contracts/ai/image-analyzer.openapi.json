@@ -1,0 +1,732 @@
+{
+  "components": {
+    "schemas": {
+      "AnalyzeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Brief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageRef"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Images",
+            "type": "array"
+          },
+          "use_vision": {
+            "default": true,
+            "description": "Ask the vision model if one is configured.",
+            "title": "Use Vision",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "images"
+        ],
+        "title": "AnalyzeRequest",
+        "type": "object"
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageAnalysis"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "preservation": {
+            "$ref": "#/components/schemas/Preservation"
+          },
+          "product": {
+            "$ref": "#/components/schemas/Product"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "images",
+          "product",
+          "preservation"
+        ],
+        "title": "AnalyzeResponse",
+        "type": "object"
+      },
+      "Background": {
+        "properties": {
+          "hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hex"
+          },
+          "kind": {
+            "enum": [
+              "white",
+              "solid",
+              "complex"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Background",
+        "type": "object"
+      },
+      "Box": {
+        "properties": {
+          "h": {
+            "title": "H",
+            "type": "number"
+          },
+          "w": {
+            "title": "W",
+            "type": "number"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "Box",
+        "type": "object"
+      },
+      "Brief": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "Brief",
+        "type": "object"
+      },
+      "CheckResult": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CheckResult",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImageAnalysis": {
+        "properties": {
+          "aspect_ratio": {
+            "title": "Aspect Ratio",
+            "type": "number"
+          },
+          "background": {
+            "$ref": "#/components/schemas/Background"
+          },
+          "colors": {
+            "items": {
+              "$ref": "#/components/schemas/NamedColor"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          },
+          "risks": {
+            "items": {
+              "enum": [
+                "low_resolution",
+                "blurry",
+                "too_dark",
+                "overexposed",
+                "subject_touches_edge",
+                "subject_lost_in_9_16_crop",
+                "has_transparency",
+                "animated"
+              ],
+              "type": "string"
+            },
+            "title": "Risks",
+            "type": "array"
+          },
+          "sha256": {
+            "description": "Hash of the original bytes; the file itself is never changed.",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "shot_type": {
+            "enum": [
+              "front",
+              "detail",
+              "lifestyle",
+              "flat"
+            ],
+            "title": "Shot Type",
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "usable_as_first_frame": {
+            "title": "Usable As First Frame",
+            "type": "boolean"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "media_id",
+          "format",
+          "width",
+          "height",
+          "aspect_ratio",
+          "sha256",
+          "quality",
+          "colors",
+          "background",
+          "subject",
+          "shot_type",
+          "usable_as_first_frame",
+          "risks"
+        ],
+        "title": "ImageAnalysis",
+        "type": "object"
+      },
+      "ImageRef": {
+        "additionalProperties": false,
+        "properties": {
+          "media_id": {
+            "description": "Caller's id for the image.",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Media Id",
+            "type": "string"
+          },
+          "storage_key": {
+            "description": "Key of the original in shared storage.",
+            "maxLength": 255,
+            "title": "Storage Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "media_id",
+          "storage_key"
+        ],
+        "title": "ImageRef",
+        "type": "object"
+      },
+      "LiveResponse": {
+        "properties": {
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "version"
+        ],
+        "title": "LiveResponse",
+        "type": "object"
+      },
+      "NamedColor": {
+        "properties": {
+          "hex": {
+            "title": "Hex",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "share": {
+            "description": "Fraction of the image, 0-1.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Share",
+            "type": "number"
+          }
+        },
+        "required": [
+          "hex",
+          "name",
+          "share"
+        ],
+        "title": "NamedColor",
+        "type": "object"
+      },
+      "Preservation": {
+        "properties": {
+          "hero_media_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Best image to start the video from.",
+            "title": "Hero Media Id"
+          },
+          "must_preserve": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Must Preserve",
+            "type": "array"
+          },
+          "negative_prompt_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Negative Prompt Terms",
+            "type": "array"
+          },
+          "original_modified": {
+            "const": false,
+            "default": false,
+            "title": "Original Modified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "hero_media_id",
+          "must_preserve",
+          "negative_prompt_terms"
+        ],
+        "title": "Preservation",
+        "type": "object"
+      },
+      "Product": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "colors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "has_logo": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Logo"
+          },
+          "has_people": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has People"
+          },
+          "key_features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Features",
+            "type": "array"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "source": {
+            "enum": [
+              "heuristic",
+              "vision"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "visible_text": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible Text",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "confidence"
+        ],
+        "title": "Product",
+        "type": "object"
+      },
+      "Quality": {
+        "properties": {
+          "brightness": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Brightness",
+            "type": "number"
+          },
+          "contrast": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Contrast",
+            "type": "number"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "sharpness": {
+            "description": "Variance of the Laplacian on a 256 px copy.",
+            "title": "Sharpness",
+            "type": "number"
+          }
+        },
+        "required": [
+          "score",
+          "sharpness",
+          "brightness",
+          "contrast"
+        ],
+        "title": "Quality",
+        "type": "object"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "checks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CheckResult"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "ReadyResponse",
+        "type": "object"
+      },
+      "Subject": {
+        "properties": {
+          "box": {
+            "$ref": "#/components/schemas/Box",
+            "description": "Normalised 0-1 bounding box of the main subject."
+          },
+          "centered": {
+            "title": "Centered",
+            "type": "boolean"
+          },
+          "coverage": {
+            "description": "Share of the frame the box covers.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage",
+            "type": "number"
+          }
+        },
+        "required": [
+          "box",
+          "coverage",
+          "centered"
+        ],
+        "title": "Subject",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "AI Social Studio - Image Analyzer",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/analyze": {
+      "post": {
+        "operationId": "analyze_v1_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analyze",
+        "tags": [
+          "image-analyzer"
+        ]
+      }
+    }
+  }
+}

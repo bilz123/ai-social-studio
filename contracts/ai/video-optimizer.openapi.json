@@ -1,0 +1,1098 @@
+{
+  "components": {
+    "schemas": {
+      "Check": {
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "string"
+          },
+          "expected": {
+            "title": "Expected",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "passed",
+          "severity",
+          "expected",
+          "actual"
+        ],
+        "title": "Check",
+        "type": "object"
+      },
+      "CheckResult": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CheckResult",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "JobError": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "JobError",
+        "type": "object"
+      },
+      "JobStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "canceled"
+        ],
+        "title": "JobStatus",
+        "type": "string"
+      },
+      "LiveResponse": {
+        "properties": {
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "version"
+        ],
+        "title": "LiveResponse",
+        "type": "object"
+      },
+      "OptimizeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "output_prefix": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_\\-/]{0,200}$",
+            "title": "Output Prefix",
+            "type": "string"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputSpec"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Outputs",
+            "type": "array"
+          },
+          "thumbnails": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThumbnailOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "video_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._\\-/]{0,254}$",
+            "title": "Video Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "video_key",
+          "output_prefix",
+          "outputs"
+        ],
+        "title": "OptimizeRequest",
+        "type": "object"
+      },
+      "OptimizeResult": {
+        "properties": {
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputResult"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/VideoFacts"
+          },
+          "thumbnails": {
+            "items": {
+              "$ref": "#/components/schemas/ThumbnailResult"
+            },
+            "title": "Thumbnails",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "outputs",
+          "thumbnails"
+        ],
+        "title": "OptimizeResult",
+        "type": "object"
+      },
+      "OptimizeView": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "number"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OptimizeResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "stage",
+          "progress",
+          "result",
+          "error",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OptimizeView",
+        "type": "object"
+      },
+      "OutputResult": {
+        "properties": {
+          "aspect_ratio": {
+            "enum": [
+              "9:16",
+              "1:1",
+              "4:5",
+              "16:9"
+            ],
+            "title": "Aspect Ratio",
+            "type": "string"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "bit_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bit Rate"
+          },
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "original_size_bytes": {
+            "title": "Original Size Bytes",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "storage_key": {
+            "title": "Storage Key",
+            "type": "string"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValidationReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "storage_key",
+          "aspect_ratio",
+          "width",
+          "height",
+          "size_bytes",
+          "duration_seconds",
+          "bit_rate",
+          "original_size_bytes",
+          "attempts",
+          "validation"
+        ],
+        "title": "OutputResult",
+        "type": "object"
+      },
+      "OutputSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "aspect_ratio": {
+            "default": "9:16",
+            "enum": [
+              "9:16",
+              "1:1",
+              "4:5",
+              "16:9"
+            ],
+            "title": "Aspect Ratio",
+            "type": "string"
+          },
+          "crf": {
+            "default": 23,
+            "maximum": 32.0,
+            "minimum": 16.0,
+            "title": "Crf",
+            "type": "integer"
+          },
+          "focus_x": {
+            "default": 0.5,
+            "description": "Crop focus, left to right.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Focus X",
+            "type": "number"
+          },
+          "max_size_mb": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.2,
+                "maximum": 500.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Size Mb"
+          },
+          "mode": {
+            "default": "crop",
+            "description": "How to fit the source into a different shape.",
+            "enum": [
+              "crop",
+              "pad_blur"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[a-z0-9_-]{1,32}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "preset": {
+            "default": "medium",
+            "enum": [
+              "veryfast",
+              "medium",
+              "slow"
+            ],
+            "title": "Preset",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "enum": [
+                  "master",
+                  "instagram_reels",
+                  "facebook_reels",
+                  "youtube_shorts",
+                  "youtube_video"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Validate the result against this.",
+            "title": "Profile"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "OutputSpec",
+        "type": "object"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "checks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CheckResult"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "ReadyResponse",
+        "type": "object"
+      },
+      "ThumbnailOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "at_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Use this moment. Omit to pick the sharpest frame.",
+            "title": "At Seconds"
+          },
+          "candidates": {
+            "default": 8,
+            "maximum": 16.0,
+            "minimum": 3.0,
+            "title": "Candidates",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ThumbnailSpec"
+            },
+            "maxItems": 4,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "ThumbnailOptions",
+        "type": "object"
+      },
+      "ThumbnailResult": {
+        "properties": {
+          "at_seconds": {
+            "title": "At Seconds",
+            "type": "number"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "storage_key": {
+            "title": "Storage Key",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "storage_key",
+          "width",
+          "height",
+          "size_bytes",
+          "at_seconds"
+        ],
+        "title": "ThumbnailResult",
+        "type": "object"
+      },
+      "ThumbnailSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "aspect_ratio": {
+            "default": "9:16",
+            "enum": [
+              "9:16",
+              "1:1",
+              "4:5",
+              "16:9"
+            ],
+            "title": "Aspect Ratio",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[a-z0-9_-]{1,32}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "maximum": 2160.0,
+                "minimum": 240.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ThumbnailSpec",
+        "type": "object"
+      },
+      "ValidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "deep": {
+            "default": false,
+            "description": "Also look for black and frozen sections.",
+            "title": "Deep",
+            "type": "boolean"
+          },
+          "expected_duration_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 600.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Duration Seconds"
+          },
+          "profile": {
+            "default": "master",
+            "enum": [
+              "master",
+              "instagram_reels",
+              "facebook_reels",
+              "youtube_shorts",
+              "youtube_video"
+            ],
+            "title": "Profile",
+            "type": "string"
+          },
+          "video_key": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._\\-/]{0,254}$",
+            "title": "Video Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "video_key"
+        ],
+        "title": "ValidateRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "ValidationReport": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/Check"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/VideoFacts"
+          },
+          "profile": {
+            "enum": [
+              "master",
+              "instagram_reels",
+              "facebook_reels",
+              "youtube_shorts",
+              "youtube_video"
+            ],
+            "title": "Profile",
+            "type": "string"
+          },
+          "valid": {
+            "description": "True when no check with severity `error` failed.",
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "profile",
+          "checks",
+          "facts"
+        ],
+        "title": "ValidationReport",
+        "type": "object"
+      },
+      "VideoFacts": {
+        "properties": {
+          "audio_codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Codec"
+          },
+          "bit_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bit Rate"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels"
+          },
+          "container": {
+            "title": "Container",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "faststart": {
+            "title": "Faststart",
+            "type": "boolean"
+          },
+          "fps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fps"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "pix_fmt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pix Fmt"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          },
+          "sample_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Rate"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "video_codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Codec"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "container",
+          "video_codec",
+          "profile",
+          "pix_fmt",
+          "width",
+          "height",
+          "fps",
+          "audio_codec",
+          "sample_rate",
+          "channels",
+          "duration_seconds",
+          "size_bytes",
+          "bit_rate",
+          "faststart"
+        ],
+        "title": "VideoFacts",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "AI Social Studio - Video Optimizer",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/optimizations": {
+      "post": {
+        "operationId": "create_optimization_v1_optimizations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptimizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptimizeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Optimization",
+        "tags": [
+          "video-optimizer"
+        ]
+      }
+    },
+    "/v1/optimizations/{job_id}": {
+      "get": {
+        "operationId": "get_optimization_v1_optimizations__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptimizeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Optimization",
+        "tags": [
+          "video-optimizer"
+        ]
+      }
+    },
+    "/v1/optimizations/{job_id}/cancel": {
+      "post": {
+        "operationId": "cancel_optimization_v1_optimizations__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptimizeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Optimization",
+        "tags": [
+          "video-optimizer"
+        ]
+      }
+    },
+    "/v1/validate": {
+      "post": {
+        "operationId": "validate_v1_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate",
+        "tags": [
+          "video-optimizer"
+        ]
+      }
+    }
+  }
+}

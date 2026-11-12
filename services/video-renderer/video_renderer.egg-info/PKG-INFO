@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: video-renderer
+Version: 0.1.0
+Summary: Video Renderer service: FFmpeg compositing of clips, zoom, transitions, text, logo and music
+Requires-Python: >=3.12
+Requires-Dist: studio-common
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24; extra == "dev"
+Requires-Dist: ruff>=0.6; extra == "dev"
+Requires-Dist: mypy>=1.11; extra == "dev"
