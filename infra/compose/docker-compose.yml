@@ -1,0 +1,235 @@
+# Development stack for AI Social Studio (Phase 0 foundations).
+#
+# Run it through the Makefile (`make up`): it passes `--env-file .env` from the repository root.
+# Every credential below is read from that .env (created by `make init`); nothing is hardcoded
+# and a missing secret stops Compose with an error instead of falling back to a default.
+#
+# Network layout (who can talk to whom):
+#   edge     nginx <-> web                      browser-facing side
+#   backend  nginx, api, queue, scheduler,      application traffic; outbound internet allowed
+#            ai-api
+#   data     mysql, redis + their clients       INTERNAL network: no route to/from the internet
+# The only published port is the nginx gateway, bound to 127.0.0.1. MySQL, Redis and the AI
+# service are never reachable from the host or the outside.
+
+name: ai-social-studio
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-api-env: &api-env
+  APP_NAME: ${APP_NAME:-AI Social Studio}
+  APP_ENV: ${APP_ENV:-local}
+  APP_KEY: ${APP_KEY:?APP_KEY is empty - run `make init`}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-http://localhost:8080}
+  LOG_CHANNEL: stack
+  LOG_STACK: stderr
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080}
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE is empty - run `make init`}
+  DB_USERNAME: ${MYSQL_USER:?MYSQL_USER is empty - run `make init`}
+  DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is empty - run `make init`}
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is empty - run `make init`}
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+  AI_SERVICE_URL: http://ai-api:8000
+  AI_HMAC_SECRET_LARAVEL_TO_AI: ${AI_HMAC_SECRET_LARAVEL_TO_AI:?AI_HMAC_SECRET_LARAVEL_TO_AI is empty - run `make init`}
+  AI_HMAC_SECRET_AI_TO_LARAVEL: ${AI_HMAC_SECRET_AI_TO_LARAVEL:?AI_HMAC_SECRET_AI_TO_LARAVEL is empty - run `make init`}
+
+x-api-build: &api-build
+  context: ../..
+  dockerfile: infra/docker/api/Dockerfile
+  target: dev
+  args:
+    HOST_UID: ${HOST_UID:-1000}
+    HOST_GID: ${HOST_GID:-1000}
+
+services:
+  # --- Public gateway: the only service with a published port --------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - api
+      - web
+    volumes:
+      - ../docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:80"
+    networks: [edge, backend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    logging: *default-logging
+
+  # --- React SPA (Vite dev server, reached only through nginx) -------------------------------
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/web/Dockerfile
+      target: dev
+    # Only public VITE_* values are passed here. No secret ever reaches the browser bundle.
+    environment:
+      VITE_API_BASE_URL: /api
+      VITE_APP_NAME: ${VITE_APP_NAME:-AI Social Studio}
+    volumes:
+      - ../../apps/web:/app
+      - web_node_modules:/app/node_modules
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5173/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    logging: *default-logging
+
+  # --- Laravel API (php-fpm, reached only by nginx) ------------------------------------------
+  api:
+    build: *api-build
+    environment: *api-env
+    volumes:
+      - ../../apps/api:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend, data]
+    healthcheck:
+      # Boots Laravel and checks MySQL + Redis. Unhealthy until `make install` has run.
+      test: ["CMD", "php", "artisan", "health:check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    logging: *default-logging
+
+  queue:
+    build: *api-build
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90", "--sleep=3", "--max-time=3600"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment: *api-env
+    volumes:
+      - ../../apps/api:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend, data]
+    restart: unless-stopped
+    logging: *default-logging
+
+  scheduler:
+    build: *api-build
+    command: ["php", "artisan", "schedule:work"]
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment: *api-env
+    volumes:
+      - ../../apps/api:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend, data]
+    restart: unless-stopped
+    logging: *default-logging
+
+  # --- Python AI service (private: no published port, not routed by nginx) -------------------
+  ai-api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai/Dockerfile
+      target: dev
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--reload"]
+    environment:
+      AI_ENVIRONMENT: ${AI_ENVIRONMENT:-local}
+      AI_LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Dedicated logical Redis DB (2) for the AI queue; Laravel uses DB 0 (default) and 1 (cache).
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is empty - run `make init`}@redis:6379/2
+      AI_HMAC_SECRET_LARAVEL_TO_AI: ${AI_HMAC_SECRET_LARAVEL_TO_AI:?AI_HMAC_SECRET_LARAVEL_TO_AI is empty - run `make init`}
+      AI_HMAC_SECRET_AI_TO_LARAVEL: ${AI_HMAC_SECRET_AI_TO_LARAVEL:?AI_HMAC_SECRET_AI_TO_LARAVEL is empty - run `make init`}
+    volumes:
+      - ../../services/ai/app:/srv/app:ro
+      - ../../services/ai/tests:/srv/tests:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [backend, data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    logging: *default-logging
+
+  # --- Data stores (internal network only) ---------------------------------------------------
+  mysql:
+    image: mysql:8.4
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE is empty - run `make init`}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER is empty - run `make init`}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is empty - run `make init`}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is empty - run `make init`}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    # The password comes from the environment (not the command line) and AOF persistence is on
+    # so queued jobs survive a restart.
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is empty - run `make init`}
+    volumes:
+      - redis_data:/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    logging: *default-logging
+
+networks:
+  edge:
+  backend:
+  data:
+    internal: true
+
+volumes:
+  mysql_data:
+  redis_data:
+  web_node_modules:
