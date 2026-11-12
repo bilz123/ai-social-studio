@@ -1,15 +1,5 @@
-import { BarChart3, CalendarClock, Clapperboard, Film, History } from 'lucide-react'
+import { BarChart3, CalendarClock, Film, History } from 'lucide-react'
 import { SectionPlaceholderPage } from './SectionPlaceholderPage'
-
-export const CreateVideoPage = () => (
-  <SectionPlaceholderPage
-    title="Create Video"
-    description="Turn product photos and a short description into a ten-second cinematic video."
-    icon={Clapperboard}
-    emptyTitle="Video creation is not available yet"
-    emptyDescription="You will upload images, describe the product and preview the result here before approving it."
-  />
-)
 
 export const MyVideosPage = () => (
   <SectionPlaceholderPage

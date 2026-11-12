@@ -198,3 +198,12 @@ Implemented in `apps/api/database/migrations` (15 files). Where it differs from 
 - `social_accounts`: added `status_reason VARCHAR(255)` (why it is not active, shown to the user), `last_checked_at`, `profile JSON` (followers, subscribers, account type, …). The provider CHECK is now `IN ('meta','instagram','google')` (Instagram Login is its own provider with its own app credentials).
 - `social_tokens` is unchanged: `access_token` / `refresh_token` hold ciphertext, one `access` row per account, `last_error` records the last failure code. Facebook Page tokens have `expires_at NULL` (non-expiring).
 - Disconnecting deletes the token rows and soft-deletes the account (`status = revoked`); reconnecting the same Page/channel restores the same row and public id.
+
+## Phase 5 additions (as built)
+
+- `project_images` (created in Phase 2) gains `thumbnail_key VARCHAR(255) NULL` and `thumbnail_bytes INT UNSIGNED NULL` (migration `…_add_thumbnails_to_project_images`). `object_key` stays the original; both keys follow `users/{userUlid}/projects/{projectUlid}/{original|thumb}/{imageUlid}.{ext}`.
+- Only validated images are ever stored: a rejected upload leaves no row and no file, so `status` is `validated` for every stored row (`pending_upload`, `uploaded` and `rejected` stay in the CHECK for the later direct-to-S3 flow).
+- `position` is unique per project (`UNIQUE (project_id, position)`), assigned as `max + 1` under a row lock on the project. Reordering and closing the gap after a delete first moves every position out of the way (`+ 1000`) and then writes `1…n`, so the unique index is never violated mid-way.
+- `projects.title` is the project name; `product_name` follows it until set separately; `product_description` is `''` for a draft that has none yet. Deleting a project removes its image rows and files at once and soft-deletes the project row.
+- `sha256` is used to refuse the same picture twice in one project (the same picture in different projects is allowed).
+- Composite foreign key `(project_id, user_id)` still guarantees an image can only belong to a project of the same user.

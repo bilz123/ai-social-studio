@@ -52,6 +52,36 @@ The OpenAPI source of truth will live in `contracts/` and the TypeScript client 
 
 ## 4. Media (direct-to-S3 uploads)
 
+### 4.0 Phase 5 as built: projects and product images (user-scoped; supersedes the workspace/presigned design below for now)
+
+**Deviation from the Phase 0 design.** Images are uploaded **through Laravel** (multipart, one file per request) instead of directly to S3 with a presigned PUT. Reason: every file must be inspected (real type from its bytes, full decode, pixel and memory limits, thumbnail) before it is accepted, and doing that after a direct upload means holding unvalidated files in the bucket. The cost is that uploads pass through PHP, which is acceptable at the 10 MB / 10-image limits. The presigned flow below remains the plan for large video files in the AI phases; `ImageStorage` already hides the disk, so the switch is local.
+
+All routes need a session and the `projects.manage` permission (the `member` role has it). Everything is scoped to the signed-in user: **a project that belongs to someone else, or does not exist, is a `404`** (its existence is never revealed). Responses use the `{data: …}` wrapper; errors are problem+json.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/projects` | The caller's projects, most recently changed first, 12 per page (`data`, `links`, `meta`). Each: `id, title, product_name, product_description, status, image_count, cover_thumbnail_url, created_at, updated_at`. |
+| POST | `/api/v1/projects` | `{title (required, ≤160), product_name?, product_description? (≤2000, may be empty for a draft)}` → `201`. Always created as `draft`; `user_id`, `status` and `ulid` cannot be set from the request. Throttle `project-write` (60/min). |
+| GET | `/api/v1/projects/{id}` | The project plus `images[]` (in order) and `meta.limits` (`max_bytes, max_images, formats, min_dimension, max_dimension, max_title_length, max_description_length`) so the SPA can validate before uploading. |
+| PATCH | `/api/v1/projects/{id}` | "Save draft": any subset of `title`, `product_name`, `product_description`. `product_name` follows the title until it is set on its own. |
+| DELETE | `/api/v1/projects/{id}` | Deletes every image row and file **immediately**, then soft-deletes the project. `204`. |
+| POST | `/api/v1/projects/{id}/images` | `multipart/form-data`, field `image` (one file) → `201` with the image. Throttle `image-upload` (40/min). Refusals are `422` with a stable `code` (below). |
+| PUT | `/api/v1/projects/{id}/images/order` | `{order: [imageId, …]}` — must list **every** image of the project exactly once, else `422`. Returns the images in the new order. |
+| DELETE | `/api/v1/projects/{id}/images/{imageId}` | Deletes the original and thumbnail files and the row; remaining images are renumbered 1…n. `204`. |
+| GET | `/api/v1/files/images/{imageId}/{thumb|original}` | **Signed link only** (see below); no session needed. |
+
+**Image resource:** `id, name, mime, bytes, width, height, position, status, thumbnail_url, original_url, url_expires_at, created_at`. Storage details (`disk`, object keys, hash) are never returned.
+
+**Upload refusal codes** (`422`, message written for the person): `image_empty`, `image_too_large`, `image_unsupported_type` (not JPEG/PNG/WebP by content), `image_corrupt` (not decodable, truncated, or the type does not match its header), `image_too_small` (< 256 px on the short side), `image_dimensions_too_large` (> 8000 px or > 36 megapixels, or more than the worker's memory allows), `image_duplicate` (same bytes already in this project), `image_limit_reached` (10 per project). A file over the size limit fails the request validator (`validation_failed`, `errors.image`). All limits come from `config/uploads.php` / `UPLOADS_*` env vars.
+
+**What is checked, in order** (`ImageProcessor`): size → the type from the file's own bytes (libmagic, never the name or the browser's `Content-Type`) → the image parser must agree and report real dimensions → JPEG end-of-image marker present (GD silently accepts cut-off JPEGs) → pixel, dimension and memory limits (so a tiny file claiming 30000×30000 is refused before decoding) → the picture is **fully decoded** to make the thumbnail (a file that does not decode is rejected). Nothing is stored for a rejected file.
+
+**Storage.** Private disk (`UPLOADS_DISK`: `local` = `storage/app/private` in development, `s3` private bucket in production). Keys are built only from random ids: `users/{userUlid}/projects/{projectUlid}/original/{imageUlid}.{ext}` and `…/thumb/{imageUlid}.jpg`; the extension comes from the detected type, never from the upload's file name (which is kept only as display text, cleaned). **The original is streamed to storage byte for byte and never modified**; the thumbnail is a separate JPEG (640 px longest side, EXIF orientation applied, all metadata dropped, transparency flattened onto white). Files are removed again if the database write fails, and when an image, project or account is deleted.
+
+**Signed links.** `thumbnail_url` / `original_url` are **relative** temporary signed URLs (`/api/v1/files/images/{id}/{variant}?expires=…&signature=…`, Laravel `signed:relative`). They last 10–15 minutes (expiry is rounded up to a 5-minute bucket so repeated API responses return the same URL and browsers can cache), cannot be edited (the signature covers path and expiry), and name exactly one file. The route streams from private storage with `Content-Type` from our own record, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, `Cache-Control: private, max-age=300`; throttled 300/min per IP. A link is a capability: anyone holding an unexpired link can fetch that one file, so links are never stored or logged and the SPA refreshes them (every 8 minutes, and when a preview fails to load).
+
+### 4.1 Original design (presigned direct-to-S3, workspace-scoped) — planned for large files
+
 **Step 1 — request upload slots**
 
 `POST /workspaces/{ws}/media/uploads`

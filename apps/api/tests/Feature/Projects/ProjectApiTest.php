@@ -141,6 +141,22 @@ class ProjectApiTest extends ProjectTestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'project.updated', 'user_id' => $user->id]);
     }
 
+    public function test_the_product_name_follows_the_title_until_it_is_set_on_its_own(): void
+    {
+        $user = $this->member();
+        $id = $this->actingAs($user)->postJson('/api/v1/projects', ['title' => 'Untitled project'])->assertCreated()->json('data.id');
+
+        $this->actingAs($user)->patchJson("/api/v1/projects/{$id}", ['title' => 'Cold brew'])
+            ->assertOk()->assertJsonPath('data.product_name', 'Cold brew');
+
+        $this->actingAs($user)->patchJson("/api/v1/projects/{$id}", ['product_name' => 'Arctic Cold Brew'])
+            ->assertOk()->assertJsonPath('data.product_name', 'Arctic Cold Brew');
+
+        // Once set separately, renaming the project leaves it alone.
+        $this->actingAs($user)->patchJson("/api/v1/projects/{$id}", ['title' => 'Winter campaign'])
+            ->assertOk()->assertJsonPath('data.product_name', 'Arctic Cold Brew');
+    }
+
     public function test_another_users_project_is_not_found_for_every_operation(): void
     {
         $owner = $this->member();

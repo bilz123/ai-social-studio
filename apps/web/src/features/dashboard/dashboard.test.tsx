@@ -6,7 +6,7 @@ import { jsonResponse, mockApi, renderApp, signedInHandlers } from '@/test/rende
 afterEach(() => vi.unstubAllGlobals())
 
 describe('dashboard', () => {
-  it('shows loading skeletons first, then every sample widget labelled as sample data', async () => {
+  it('shows loading skeletons first, then the sample widgets labelled as sample data', async () => {
     mockApi(signedInHandlers())
     renderApp('/dashboard')
 
@@ -16,12 +16,48 @@ describe('dashboard', () => {
     expect(await within(videos).findByText('Pour-over set, slow orbit')).toBeInTheDocument()
     expect(within(videos).getByText('Awaiting approval')).toBeInTheDocument()
 
-    for (const name of ['Recent projects', 'Publishing activity']) {
-      const card = await screen.findByRole('region', { name })
-      expect(within(card).getByText('Sample data')).toBeInTheDocument()
-    }
+    const publishing = await screen.findByRole('region', { name: 'Publishing activity' })
+    expect(within(publishing).getByText('Sample data')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
     expect(await screen.findByText('Videos generated')).toBeInTheDocument()
+  })
+
+  it('shows the real projects, with an empty state when there are none', async () => {
+    mockApi(signedInHandlers())
+    renderApp('/dashboard')
+
+    const empty = await screen.findByRole('region', { name: 'Recent projects' })
+    expect(await within(empty).findByText('No projects yet')).toBeInTheDocument()
+    expect(within(empty).queryByText('Sample data')).not.toBeInTheDocument()
+  })
+
+  it('lists recent projects and counts them', async () => {
+    mockApi({
+      ...signedInHandlers(),
+      'GET /v1/projects?page=1': () =>
+        jsonResponse({
+          data: [
+            {
+              id: '01PROJECTAAAAAAAAAAAAAAAAA',
+              title: 'Ceramic mug launch',
+              product_name: 'Mug',
+              product_description: '',
+              status: 'draft',
+              image_count: 3,
+              cover_thumbnail_url: null,
+              created_at: '2026-11-12T09:00:00Z',
+              updated_at: '2026-11-12T10:00:00Z',
+            },
+          ],
+          meta: { current_page: 1, last_page: 1, total: 1 },
+        }),
+    })
+    renderApp('/dashboard')
+
+    const card = await screen.findByRole('region', { name: 'Recent projects' })
+    const link = await within(card).findByRole('link', { name: /Ceramic mug launch/ })
+    expect(link).toHaveAttribute('href', '/create/01PROJECTAAAAAAAAAAAAAAAAA')
+    expect(within(card).getByText(/3 images/)).toBeInTheDocument()
   })
 
   it('shows real account activity from the API', async () => {

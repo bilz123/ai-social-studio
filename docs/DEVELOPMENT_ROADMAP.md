@@ -66,6 +66,9 @@ Critical path: **P0 → P1 → P2 → P3 → P5** (with P4 parallel to late P2/P
 - Quotas surfaced in UI.
 - **DoD:** Playwright E2E happy path (fake provider); keyboard/screen-reader pass on core flow; mobile-responsive.
 
+### Delivery note — "Phase 5: Image upload and project management" (the Create Video module) — ✅ built
+> Numbering note: delivery phases requested during implementation differ from the plan numbering below. This slice covers the media part of plan Phase 1 and the first part of plan Phase 3 (the Create Video screens). Delivered: projects API, secure image upload (content validation, private storage, thumbnails, signed links), reorder/delete, Create Video list and editor (drag and drop, previews, progress, reorder, validation, description editor, save draft, edit existing), dashboard widgets on real data. **Not delivered:** direct-to-S3 presigned uploads (uploads pass through Laravel; see API_DESIGN §4.0), virus scanning, AI-assisted description, project status transitions beyond `draft`, per-image roles/notes, S3 verified against a real bucket. See API_DESIGN §4.0.
+
 ### Phase 4 — Social connections (≈ 2 wk; parallel with late Phase 2/3) — ✅ built (see SOCIAL_MEDIA_INTEGRATION §0)
 > Delivered: three provider services behind one interface, OAuth state + PKCE, encrypted tokens, refresh job, Connected Accounts UI, mocked-provider tests. **Not delivered:** Meta deauthorize/data-deletion callbacks (needed before Meta Live mode), a fake provider server for CI (mocked HTTP is used instead), real-provider verification (needs developer credentials). Setup: [SOCIAL_PROVIDER_SETUP](SOCIAL_PROVIDER_SETUP.md).
 - `SocialPlatform` interface + Meta and Google implementations for connect/callback/discover/revoke.

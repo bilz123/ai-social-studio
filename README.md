@@ -3,8 +3,9 @@
 Create cinematic 10-second product videos from images and a description, approve them, and publish
 to Facebook, Instagram and YouTube.
 
-This repository is at **Phase 0/1 (Foundations)**: the three services run, talk to each other and
-report health. No product features exist yet. Design lives in [`docs/`](docs/) (start with
+This repository is at **Phase 5**: accounts, the dashboard, social connections and the Create Video
+module (project drafts with product images) work. Video generation and publishing come next.
+Design lives in [`docs/`](docs/) (start with
 [`PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) and
 [`DEVELOPMENT_ROADMAP.md`](docs/DEVELOPMENT_ROADMAP.md)).
 
@@ -152,6 +153,20 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
 - **Tests**: mocked provider responses (no network) for every code path; no real Meta or Google round
   trip has been run yet.
 
+## Phase 5: Create Video (images and projects)
+
+- **Create Video** (`/create`, `/create/:id`): your drafts, and an editor with a project name, a product
+  description (with character count), and a multi-image uploader: drag and drop or choose files, previews,
+  per-file progress, retry/cancel, remove (with confirmation), reorder (drag and drop, or arrow buttons for
+  keyboard users), a cover image, validation in the browser and on the server, "Save draft", and opening
+  any draft later to keep editing. The dashboard's project list and counter use real data.
+- **API** (`/api/v1/projects/*`, `/api/v1/files/images/*`): see `docs/API_DESIGN.md` §4.0.
+- **Uploads**: JPEG, PNG, WebP; 10 MB and 10 images per project by default (`UPLOADS_*`). The type is
+  read from the file's bytes, the picture is fully decoded, pixel limits stop decompression bombs, and
+  nothing is stored for a rejected file. Originals are stored **unchanged** on a private disk under
+  generated names; thumbnails are separate JPEGs; files are reachable only through temporary signed links.
+- **Needs** the PHP `gd` and `exif` extensions (added to the Docker image and CI).
+
 ## Deviations from the Phase 0 docs
 
 - Phase 2 ownership is per **user** (`user_id` on every record), not per workspace; workspaces can be
@@ -161,6 +176,8 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
 - Social OAuth: Instagram uses its own provider (Instagram Login) instead of going through a Facebook
   Page, the callback is handled by the SPA, and YouTube's upload quota is 100 calls/day (not about 6).
   See `docs/SOCIAL_MEDIA_INTEGRATION.md` §0.
+- Product images are uploaded through Laravel (multipart) rather than direct-to-S3 presigned PUTs, so every
+  file can be inspected before it is stored. See `docs/API_DESIGN.md` §4.0.
 - Laravel skeleton is API-only (no `web` routes, no `/up`): health lives under `/api/v1/health`.
 - A single `docker-compose.yml` (dev) instead of base + override; production targets come in the
   deployment phase.

@@ -25,7 +25,7 @@ export const sampleUser = {
   last_login_at: null,
 }
 
-type Handler = (init: RequestInit | undefined) => Response | Promise<Response>
+export type Handler = (init: RequestInit | undefined) => Response | Promise<Response>
 
 /** Replaces fetch with routes keyed by "METHOD /path" (the /api prefix is stripped). */
 export function mockApi(handlers: Record<string, Handler>) {
@@ -62,9 +62,13 @@ export function renderApp(path: string) {
 
 export const emptyActivity = () => jsonResponse({ data: [] })
 
+export const emptyProjects = () =>
+  jsonResponse({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } })
+
 /** Handlers every signed-in screen needs (who am I + the account activity list). */
 export const signedInHandlers = (): Record<string, Handler> => ({
   'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }),
   'GET /v1/account/activity': emptyActivity,
   'GET /v1/social/accounts': () => jsonResponse({ data: [] }),
+  'GET /v1/projects?page=1': () => emptyProjects(),
 })

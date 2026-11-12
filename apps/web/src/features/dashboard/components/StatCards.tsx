@@ -1,5 +1,6 @@
 import { Film, FolderKanban, Link2, Send } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useProjectList } from '@/features/projects/useProjects'
 import { useSocialAccounts } from '@/features/social/useSocial'
 import { Badge } from '@/shared/ui/Badge'
 import { Skeleton } from '@/shared/ui/Skeleton'
@@ -9,8 +10,18 @@ import { useSampleStats } from '../data/useSample'
 export function StatCards() {
   const query = useSampleStats()
   const accounts = useSocialAccounts()
+  const projects = useProjectList(1)
 
-  // The connected accounts tile is real; the other three are still sample numbers.
+  // The projects and connected accounts tiles are real; videos and posts are still sample numbers.
+  const projectsTile: { value: ReactNode; note: string } = projects.isSuccess
+    ? {
+        value: projects.data.meta.total,
+        note: projects.data.meta.total === 0 ? 'None yet' : 'Drafts and projects',
+      }
+    : projects.isError
+      ? { value: '–', note: 'Could not load' }
+      : { value: <Skeleton className="h-8 w-10" />, note: 'Loading…' }
+
   const accountsTile: { value: ReactNode; note: string } = accounts.isSuccess
     ? (() => {
         const needAttention = accounts.data.filter((account) => account.status !== 'active').length
@@ -39,7 +50,7 @@ export function StatCards() {
   const stats = query.data
   const tiles = stats
     ? [
-        { label: 'Projects', icon: FolderKanban, ...stats.projects },
+        { label: 'Projects', icon: FolderKanban, ...projectsTile },
         { label: 'Videos generated', icon: Film, ...stats.videos },
         { label: 'Posts published', icon: Send, ...stats.published },
         { label: 'Connected accounts', icon: Link2, ...accountsTile },
@@ -71,7 +82,7 @@ export function StatCards() {
             ))}
       </dl>
       <div className="mt-2 flex justify-end">
-        <Badge tone="warn">Projects, videos and posts are sample data</Badge>
+        <Badge tone="warn">Videos and posts are sample data</Badge>
       </div>
     </section>
   )

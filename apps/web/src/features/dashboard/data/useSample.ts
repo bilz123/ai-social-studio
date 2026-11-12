@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   sampleAccounts,
   sampleNotifications,
-  sampleProjects,
   samplePublishing,
   sampleStats,
   sampleVideos,
@@ -24,7 +23,6 @@ function useSample<T>(key: string, factory: () => T) {
 
 // PLACEHOLDER: swap each of these for an apiFetch call when its endpoint exists.
 export const useSampleStats = () => useSample('stats', sampleStats)
-export const useSampleProjects = () => useSample('projects', sampleProjects)
 export const useSampleVideos = () => useSample('videos', sampleVideos)
 export const useSampleAccounts = () => useSample('accounts', sampleAccounts)
 export const useSamplePublishing = () => useSample('publishing', samplePublishing)

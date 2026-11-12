@@ -46,6 +46,11 @@ export interface ApiRequestOptions {
 
 const DEFAULT_TIMEOUT_MS = 15_000
 
+/** Full URL of an API path (the base URL comes from VITE_API_BASE_URL). */
+export function apiUrl(path: string): string {
+  return joinUrl(path)
+}
+
 function joinUrl(path: string): string {
   return `${env.apiBaseUrl}/${path.replace(/^\/+/, '')}`
 }
@@ -70,6 +75,32 @@ async function refreshCsrfCookie(): Promise<void> {
   await fetch(joinUrl('sanctum/csrf-cookie'), {
     credentials: 'include',
     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+  })
+}
+
+/**
+ * Headers for a state-changing request that cannot go through `apiFetch` (an XHR upload needs
+ * progress events, which `fetch` does not offer). Ensures the CSRF cookie exists first.
+ */
+export async function mutatingHeaders(refresh = false): Promise<Record<string, string>> {
+  if (refresh || !readCookie(CSRF_COOKIE)) await refreshCsrfCookie()
+  const token = readCookie(CSRF_COOKIE)
+  return {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(token ? { [CSRF_HEADER]: token } : {}),
+  }
+}
+
+/** Turns an error response body (problem+json when available) into an ApiError. */
+export function problemToError(status: number, body: unknown, requestId: string | null): ApiError {
+  const problem = (body ?? {}) as Problem
+  return new ApiError({
+    status,
+    code: problem.code ?? 'http_error',
+    message: problem.detail ?? problem.title ?? `Request failed with status ${status}.`,
+    requestId: problem.request_id ?? requestId,
+    errors: problem.errors,
   })
 }
 
@@ -144,12 +175,5 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
     return body as T
   }
 
-  const problem = (body ?? {}) as Problem
-  throw new ApiError({
-    status: response.status,
-    code: problem.code ?? 'http_error',
-    message: problem.detail ?? problem.title ?? `Request failed with status ${response.status}.`,
-    requestId: problem.request_id ?? response.headers.get('X-Request-Id'),
-    errors: problem.errors,
-  })
+  throw problemToError(response.status, body, response.headers.get('X-Request-Id'))
 }

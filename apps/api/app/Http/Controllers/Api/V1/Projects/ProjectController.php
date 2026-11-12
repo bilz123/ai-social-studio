@@ -72,7 +72,10 @@ class ProjectController extends Controller
         }
 
         if (array_key_exists('product_name', $data)) {
-            $data['product_name'] ??= $model->title;
+            $data['product_name'] ??= $data['title'] ?? $model->title;
+        } elseif (array_key_exists('title', $data) && $model->product_name === $model->title) {
+            // The product name still just mirrors the title: keep following it when it is renamed.
+            $data['product_name'] = $data['title'];
         }
 
         $model->fill($data)->save();

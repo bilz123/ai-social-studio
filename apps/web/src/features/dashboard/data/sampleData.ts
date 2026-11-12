@@ -1,7 +1,7 @@
 /**
  * TEMPORARY PLACEHOLDER DATA.
  *
- * The API has no endpoints yet for projects, videos, connected accounts, publishing or
+ * The API has no endpoints yet for videos, connected accounts, publishing or
  * notifications, so the dashboard shows these sample records (and labels them "Sample data").
  * When an endpoint ships, replace the matching function in `useSample.ts` with a real
  * `apiFetch` call returning the same shape; the components do not change.
@@ -10,24 +10,14 @@
  */
 
 export type VideoStatus = 'ready' | 'awaiting_approval' | 'generating' | 'failed'
-export type ProjectStatus = 'draft' | 'generating' | 'review' | 'published'
 export type PlatformId = 'facebook' | 'instagram' | 'youtube'
 export type ConnectionStatus = 'connected' | 'needs_reconnect' | 'not_connected'
 export type PublishStatus = 'published' | 'scheduled' | 'failed'
 
 export interface SampleStats {
-  projects: { value: number; note: string }
   videos: { value: number; note: string }
   published: { value: number; note: string }
   accounts: { value: number; note: string }
-}
-
-export interface SampleProject {
-  id: string
-  title: string
-  status: ProjectStatus
-  images: number
-  updatedAt: string
 }
 
 export interface SampleVideo {
@@ -66,18 +56,10 @@ const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOSt
 const ahead = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString()
 
 export const sampleStats = (): SampleStats => ({
-  projects: { value: 12, note: '3 in progress' },
   videos: { value: 28, note: '2 awaiting approval' },
   published: { value: 41, note: 'across 3 platforms' },
   accounts: { value: 3, note: '1 needs attention' },
 })
-
-export const sampleProjects = (): SampleProject[] => [
-  { id: 'p1', title: 'Ceramic pour-over set', status: 'review', images: 6, updatedAt: ago(12) },
-  { id: 'p2', title: 'Trail running vest', status: 'generating', images: 4, updatedAt: ago(48) },
-  { id: 'p3', title: 'Walnut desk lamp', status: 'published', images: 8, updatedAt: ago(60 * 26) },
-  { id: 'p4', title: 'Rose quartz serum', status: 'draft', images: 3, updatedAt: ago(60 * 52) },
-]
 
 export const sampleVideos = (): SampleVideo[] => [
   {

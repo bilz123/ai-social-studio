@@ -36,7 +36,6 @@ describe('sidebar', () => {
   })
 
   it.each([
-    ['/create', 'Create Video'],
     ['/history', 'Publishing History'],
     ['/scheduled', 'Scheduled Posts'],
     ['/analytics', 'Analytics'],

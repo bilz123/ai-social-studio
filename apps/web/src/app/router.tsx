@@ -8,11 +8,12 @@ import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+import { CreateVideoPage } from '@/features/projects/pages/CreateVideoPage'
+import { ProjectEditorPage } from '@/features/projects/pages/ProjectEditorPage'
 import { ConnectedAccountsPage } from '@/features/social/pages/ConnectedAccountsPage'
 import { ConnectionCallbackPage } from '@/features/social/pages/ConnectionCallbackPage'
 import {
   AnalyticsPage,
-  CreateVideoPage,
   MyVideosPage,
   PublishingHistoryPage,
   ScheduledPostsPage,
@@ -55,6 +56,7 @@ export const routes = [
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/create', element: <CreateVideoPage /> },
+          { path: '/create/:projectId', element: <ProjectEditorPage /> },
           { path: '/accounts', element: <ConnectedAccountsPage /> },
           { path: '/connections/callback/:platform', element: <ConnectionCallbackPage /> },
           { path: '/videos', element: <MyVideosPage /> },
