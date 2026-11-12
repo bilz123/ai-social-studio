@@ -3,7 +3,7 @@ COMPOSE := HOST_UID=$$(id -u) HOST_GID=$$(id -g) docker compose --env-file .env 
 GATEWAY_PORT ?= 8080
 
 .DEFAULT_GOAL := help
-.PHONY: help init build up down restart logs ps install migrate fresh health \
+.PHONY: help init build up down restart logs ps install migrate seed fresh health \
         test test-api test-web test-ai lint lint-api lint-web lint-ai format
 
 help: ## Show this help
@@ -35,6 +35,9 @@ install: ## Install Laravel dependencies inside the api container (first run)
 
 migrate: ## Run database migrations
 	$(COMPOSE) exec api php artisan migrate --force
+
+seed: ## Seed roles and permissions (idempotent)
+	$(COMPOSE) exec api php artisan db:seed --force
 
 fresh: ## DESTROY all data volumes and rebuild from scratch
 	$(COMPOSE) down -v
