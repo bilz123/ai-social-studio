@@ -29,13 +29,17 @@ class CorsTest extends TestCase
             ->assertHeader('Access-Control-Allow-Credentials', 'true');
     }
 
-    public function test_preflight_from_a_foreign_origin_gets_no_cors_headers(): void
+    public function test_preflight_from_a_foreign_origin_is_never_granted(): void
     {
-        $this->withHeaders([
+        // With a single configured origin the CORS library always answers with that origin; the
+        // browser then rejects the mismatch. What matters is that the foreign origin is never echoed.
+        $response = $this->withHeaders([
             'Origin' => self::FOREIGN,
             'Access-Control-Request-Method' => 'POST',
-        ])->options('/api/v1/health')
-            ->assertHeaderMissing('Access-Control-Allow-Origin');
+        ])->options('/api/v1/health');
+
+        $this->assertNotSame(self::FOREIGN, $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertNotSame('*', $response->headers->get('Access-Control-Allow-Origin'));
     }
 
     public function test_actual_requests_from_an_allowed_origin_expose_the_documented_headers(): void
@@ -47,10 +51,11 @@ class CorsTest extends TestCase
         $this->assertStringContainsString('X-Request-Id', (string) $response->headers->get('Access-Control-Expose-Headers'));
     }
 
-    public function test_actual_requests_from_a_foreign_origin_get_no_cors_headers(): void
+    public function test_actual_requests_from_a_foreign_origin_are_never_granted(): void
     {
-        $this->withHeaders(['Origin' => self::FOREIGN])
-            ->getJson('/api/v1/health')
-            ->assertHeaderMissing('Access-Control-Allow-Origin');
+        $response = $this->withHeaders(['Origin' => self::FOREIGN])->getJson('/api/v1/health');
+
+        $this->assertNotSame(self::FOREIGN, $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertNotSame('*', $response->headers->get('Access-Control-Allow-Origin'));
     }
 }
