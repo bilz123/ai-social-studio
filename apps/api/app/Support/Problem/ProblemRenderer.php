@@ -2,6 +2,7 @@
 
 namespace App\Support\Problem;
 
+use App\Exceptions\ImageRejectedException;
 use App\Exceptions\SocialIntegrationException;
 use App\Http\Middleware\AssignRequestId;
 use Illuminate\Auth\AuthenticationException;
@@ -65,6 +66,10 @@ class ProblemRenderer
 
         if ($e instanceof SocialIntegrationException) {
             // The message is written for end users; provider details stay in the log.
+            return [$e->status, $e->errorCode, $e->getMessage(), null, []];
+        }
+
+        if ($e instanceof ImageRejectedException) {
             return [$e->status, $e->errorCode, $e->getMessage(), null, []];
         }
 

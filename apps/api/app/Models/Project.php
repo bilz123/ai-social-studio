@@ -9,6 +9,7 @@ use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
@@ -34,6 +35,16 @@ class Project extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProjectImage::class)->orderBy('position');
+    }
+
+    /**
+     * The first image in the project's order; used as the card picture in lists.
+     *
+     * @return HasOne<ProjectImage, $this>
+     */
+    public function coverImage(): HasOne
+    {
+        return $this->hasOne(ProjectImage::class)->ofMany('position', 'min');
     }
 
     /** @return HasMany<VideoGenerationJob, $this> */

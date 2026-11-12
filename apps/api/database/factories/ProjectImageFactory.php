@@ -20,8 +20,10 @@ class ProjectImageFactory extends Factory
             'project_id' => Project::factory(),
             // Always the owner of the project, also when the project is passed with ->for().
             'user_id' => fn (array $attributes): int => Project::query()->findOrFail($attributes['project_id'])->user_id,
-            'disk' => 's3',
+            'disk' => config('uploads.disk'),
             'object_key' => 'uploads/'.Str::ulid().'.jpg',
+            'thumbnail_key' => null,
+            'thumbnail_bytes' => null,
             'original_name' => fake()->word().'.jpg',
             'mime' => 'image/jpeg',
             'bytes' => fake()->numberBetween(100_000, 5_000_000),

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Images\ImageProcessor;
 use App\Services\Social\SocialIntegrationRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SocialIntegrationRegistry::class);
+        $this->app->singleton(ImageProcessor::class, fn (): ImageProcessor => new ImageProcessor((array) config('uploads')));
     }
 
     /**
@@ -110,6 +112,13 @@ class AppServiceProvider extends ServiceProvider
         // Starting / finishing an OAuth connection, and managing connected accounts.
         RateLimiter::for('social-connect', fn (Request $request) => Limit::perMinute(10)->by($this->actorKey($request)));
         RateLimiter::for('social-manage', fn (Request $request) => Limit::perMinute(30)->by($this->actorKey($request)));
+
+        // Creating, saving, deleting and reordering projects and images.
+        RateLimiter::for('project-write', fn (Request $request) => Limit::perMinute(60)->by($this->actorKey($request)));
+        // Image uploads decode a full picture, so they are the most expensive request we serve.
+        RateLimiter::for('image-upload', fn (Request $request) => Limit::perMinute(40)->by($this->actorKey($request)));
+        // Signed file links are fetched by browsers (every thumbnail in a grid is one request).
+        RateLimiter::for('files', fn (Request $request) => Limit::perMinute(300)->by((string) $request->ip()));
     }
 
     private function actorKey(Request $request): string

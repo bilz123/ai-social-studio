@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Account;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Account\DeleteAccountRequest;
 use App\Services\AuditLogger;
+use App\Services\Images\ImageStorage;
 use App\Services\Social\SocialConnectionService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -17,11 +18,14 @@ class AccountController extends Controller
      * projects, images, jobs, videos, social accounts and (encrypted) tokens. Grants at the
      * social providers are revoked first, best effort.
      */
-    public function destroy(DeleteAccountRequest $request, AuditLogger $audit, SocialConnectionService $social): Response
+    public function destroy(DeleteAccountRequest $request, AuditLogger $audit, SocialConnectionService $social, ImageStorage $files): Response
     {
         $user = $request->user();
 
         $social->revokeAllFor($user);
+
+        // Database rows cascade; uploaded files would otherwise stay behind on the disk.
+        $files->deleteUserFiles($user);
 
         Auth::guard('web')->logout();
 

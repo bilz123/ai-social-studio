@@ -12,7 +12,10 @@ use App\Http\Controllers\Api\V1\Auth\NewPasswordController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\V1\Files\ImageFileController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\Projects\ProjectController;
+use App\Http\Controllers\Api\V1\Projects\ProjectImageController;
 use App\Http\Controllers\Api\V1\Social\SocialAccountController;
 use App\Http\Controllers\Api\V1\Social\SocialConnectionController;
 use App\Http\Controllers\Api\V1\Social\SocialPlatformController;
@@ -85,3 +88,27 @@ Route::middleware(['auth:sanctum', 'can:social-accounts.manage'])->prefix('socia
         ->whereIn('platform', SocialPlatform::slugs())
         ->middleware('throttle:social-connect')->name('callback');
 });
+
+/*
+| Create Video projects and their product images. Everything is scoped to the signed-in user: a
+| project that belongs to someone else is a 404. Image files are private; the API hands out
+| temporary signed links, and the file route below is the only way to read a file.
+*/
+Route::middleware(['auth:sanctum', 'can:projects.manage'])->prefix('projects')->name('projects.')->group(function (): void {
+    Route::get('/', [ProjectController::class, 'index'])->name('index');
+    Route::post('/', [ProjectController::class, 'store'])->middleware('throttle:project-write')->name('store');
+    Route::get('/{project}', [ProjectController::class, 'show'])->name('show');
+    Route::patch('/{project}', [ProjectController::class, 'update'])->middleware('throttle:project-write')->name('update');
+    Route::delete('/{project}', [ProjectController::class, 'destroy'])->middleware('throttle:project-write')->name('destroy');
+
+    Route::post('/{project}/images', [ProjectImageController::class, 'store'])->middleware('throttle:image-upload')->name('images.store');
+    Route::put('/{project}/images/order', [ProjectImageController::class, 'reorder'])->middleware('throttle:project-write')->name('images.reorder');
+    Route::delete('/{project}/images/{image}', [ProjectImageController::class, 'destroy'])->middleware('throttle:project-write')->name('images.destroy');
+});
+
+// Reached with a signed, expiring link instead of a session, so <img> tags and, later, the AI
+// service can fetch a file without any credentials of their own.
+Route::get('/files/images/{image}/{variant}', ImageFileController::class)
+    ->whereIn('variant', ['thumb', 'original'])
+    ->middleware(['signed:relative', 'throttle:files'])
+    ->name('files.images.show');

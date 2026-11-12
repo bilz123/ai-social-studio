@@ -63,6 +63,10 @@ x-api-env: &api-env
   INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET:-}
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  # Product image uploads (private disk; see docs/API_DESIGN.md).
+  UPLOADS_DISK: ${UPLOADS_DISK:-local}
+  UPLOADS_MAX_MB: ${UPLOADS_MAX_MB:-10}
+  UPLOADS_MAX_IMAGES: ${UPLOADS_MAX_IMAGES:-10}
 
 x-api-build: &api-build
   context: ../..

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\ImageRejectedException;
 use App\Exceptions\SocialIntegrationException;
 use App\Http\Middleware\AssignRequestId;
 use App\Support\Problem\ProblemRenderer;
@@ -43,7 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         // Expected, user-facing failures; provider errors are logged by the integration itself.
-        $exceptions->dontReport(SocialIntegrationException::class);
+        $exceptions->dontReport([SocialIntegrationException::class, ImageRejectedException::class]);
 
         // Every API error is RFC 9457 problem+json with a stable machine-readable code.
         $exceptions->render(
