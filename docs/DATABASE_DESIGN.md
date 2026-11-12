@@ -172,3 +172,22 @@ User deletion / Meta data-deletion callback → queued job removes personal data
 ## 8. Migration order
 
 `users, workspaces, workspace_members → media → campaigns, campaign_assets → social_connections, oauth_states, social_accounts → video_generations, generation_clips, generation_events, videos → video_reviews → publications, publication_targets, publication_attempts → inbound_events, audit_logs, usage_ledger`
+
+## 9. Phase 2 implementation notes
+
+Implemented in `apps/api/database/migrations` (15 files). Where it differs from the design above:
+
+- **Ownership is per user.** Every business table has `user_id`; there are no `workspaces` yet.
+  Child tables reference their parent with a composite foreign key `(parent_id, user_id)` so a row
+  can never belong to a different user than its parent (enforced by the database, not only policies).
+- **Public ids** are ULIDs in a `ulid` column; auto-increment ids never leave the API.
+- **Roles and permissions**: `roles`, `permissions`, `permission_role`, `role_user`; `member` and
+  `admin` are created by a migration through the idempotent `RoleCatalog::sync()`.
+- **Tokens**: `social_tokens` holds one row per account and kind (access/refresh) with
+  Laravel-encrypted ciphertext in `text` columns; the model hides them from serialization.
+- **Review state** lives on `generated_videos` (`approval_status`, `reviewed_at`, `review_comment`);
+  a separate `video_reviews` table is deferred until multi-reviewer workflows exist.
+- **Audit log** is append-only: the model refuses updates and deletes; `user_id` is nulled when the
+  user is deleted so history survives account deletion.
+- Value constraints (statuses, ranges) are CHECK constraints on MySQL, created through `SqlCheck`;
+  the SQLite test database skips them and the CI MySQL step proves them.

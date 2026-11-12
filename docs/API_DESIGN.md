@@ -306,3 +306,16 @@ Stable machine codes (non-exhaustive): `validation_failed`, `unauthenticated`, `
 - `connect` returns the authorize URL; `state` is generated server-side and bound to session + workspace + provider.
 - The `/internal/*` routes are not exposed through the public ingress except the two webhook paths, which are additionally IP-restricted where possible and always signature-verified.
 - Mass-assignment protection via `FormRequest::validated()` only; `Resource` classes control output (no tokens, ever).
+
+## Phase 2 implementation notes (authentication)
+
+- Sanctum **SPA cookie mode**: `GET /api/sanctum/csrf-cookie`, then send `X-XSRF-TOKEN` with every
+  state-changing request. Register and login refuse requests without a session (no token flows).
+- Errors are RFC 9457 `application/problem+json` with `code`: `validation_failed`, `unauthenticated`,
+  `forbidden`, `rate_limited`, `csrf_token_mismatch`.
+- Rate limits (per minute unless noted): register 5 (+30/h per IP); login 5 per email+IP, 20 per IP;
+  forgot-password 3 per email+IP (+20/h); reset-password 5 per email+IP; verification 6; profile
+  update, password change and account deletion 5; everything else 120 per user or IP.
+- Email links point at the SPA (`/verify-email?id&hash&expires&signature`, `/reset-password?token&email`);
+  the SPA calls the signed API route. Changing the password signs out every other session.
+- `GET /api/v1/admin/users` requires the `users.view` permission.

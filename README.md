@@ -46,7 +46,12 @@ make migrate   # run migrations
 make health    # check every service
 ```
 
-Open <http://localhost:8080>. The status page shows live and readiness results from the API.
+Open <http://localhost:8080>: register an account, then read the verification and password-reset
+emails in the Mailpit inbox at <http://localhost:8025> (development only; nothing is sent out).
+Service status is at <http://localhost:8080/status>.
+
+Seed the roles and permissions with `make seed` (the migrations also create them, so this is only
+needed after a `make fresh`).
 
 Other commands: `make ps`, `make logs s=api`, `make down`, `make fresh` (**deletes data volumes**),
 `make help`.
@@ -91,7 +96,28 @@ make test-api   && make lint-api    # PHPUnit; Pint           (needs the stack u
 Python integration tests against a real Redis run when `REDIS_URL` is set, otherwise they skip.
 CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose config`.
 
+## Phase 2: accounts and data model
+
+- **Auth**: Laravel Sanctum in SPA cookie-session mode (HttpOnly session cookie plus CSRF token; no
+  tokens in browser storage). Endpoints: `POST /api/v1/auth/{register,login,logout,forgot-password,reset-password}`,
+  `GET /api/v1/auth/{me,verify-email/{id}/{hash}}`, `POST /api/v1/auth/email/verification-notification`,
+  `GET|PATCH /api/v1/account/profile`, `PUT /api/v1/account/password`, `GET /api/v1/account/activity`,
+  `DELETE /api/v1/account`. Details in `docs/API_DESIGN.md`.
+- **Data**: 15 migrations covering users, roles, permissions, social accounts and encrypted tokens,
+  projects, images, generation jobs, videos, publishing, scheduling, notifications and an
+  append-only audit log. Every user-owned table carries `user_id`, and child tables use composite
+  foreign keys so a row can never point at another user's parent. See `docs/DATABASE_DESIGN.md`.
+- **Security**: bcrypt hashing, OAuth tokens encrypted at rest (`encrypted` cast, hidden from
+  serialization), owner-only policies, mass-assignment allow-lists, rate limits on every auth route,
+  session invalidation on password change, no user enumeration on login/reset.
+- **Web**: sign in, register, forgot/reset password, email verification, protected routes, profile
+  (details, password, activity, delete account).
+
 ## Deviations from the Phase 0 docs
+
+- Phase 2 ownership is per **user** (`user_id` on every record), not per workspace; workspaces can be
+  added later without reshaping these tables. Video review state is a column on `generated_videos`
+  (`approval_status`, `reviewed_at`, `review_comment`) instead of a `video_reviews` table.
 
 - Laravel skeleton is API-only (no `web` routes, no `/up`): health lives under `/api/v1/health`.
 - A single `docker-compose.yml` (dev) instead of base + override; production targets come in the
@@ -99,9 +125,9 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
 
 ## Known issues
 
-- The Laravel app was written without running `composer install` (Packagist was unreachable from the
-  authoring environment). PHP syntax is verified, but **PHPUnit, Pint and a live boot have not been
-  run yet**: run `make install && make test-api && make lint-api` first and report any failure.
+- Packagist was unreachable from the authoring environment, so PHPUnit and Pint run in GitHub
+  Actions (tests on SQLite, plus a migrate up/down/up and seed against MySQL 8.4 and Redis). Run
+  `make install && make test-api && make lint-api` locally as well.
 - The full Docker stack and MySQL connectivity were not run in the authoring environment (no Docker
   daemon). Compose config is validated; first `make up` is the real test.
 - No `composer.lock` yet; it is created by the first `make install` and should then be committed.
