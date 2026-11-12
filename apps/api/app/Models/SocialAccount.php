@@ -34,7 +34,9 @@ class SocialAccount extends Model
             'status' => SocialAccountStatus::class,
             'is_enabled' => 'boolean',
             'capabilities' => 'array',
+            'profile' => 'array',
             'last_publish_at' => 'datetime',
+            'last_checked_at' => 'datetime',
         ];
     }
 
