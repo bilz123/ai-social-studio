@@ -1,26 +1,18 @@
 import { Link2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PLATFORM_COPY, accountBadge } from '@/features/social/describe'
+import { useSocialAccounts } from '@/features/social/useSocial'
 import { Badge } from '@/shared/ui/Badge'
-import type { BadgeTone } from '@/shared/ui/Badge'
 import { Card, CardHeader } from '@/shared/ui/Card'
 import { buttonClasses } from '@/shared/ui/buttonStyles'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ErrorState } from '@/shared/ui/ErrorState'
+import { PlatformMark } from '@/shared/ui/PlatformMark'
 import { Skeleton } from '@/shared/ui/Skeleton'
-import type { ConnectionStatus } from '../data/sampleData'
-import { useSampleAccounts } from '../data/useSample'
-import { PLATFORM_NAMES } from '../data/platforms'
-import { PlatformMark } from './PlatformMark'
-import { SampleBadge } from './SampleBadge'
 
-const STATUS: Record<ConnectionStatus, { label: string; tone: BadgeTone }> = {
-  connected: { label: 'Connected', tone: 'ok' },
-  needs_reconnect: { label: 'Reconnect', tone: 'warn' },
-  not_connected: { label: 'Not connected', tone: 'neutral' },
-}
-
+/** Real data: GET /api/v1/social/accounts. */
 export function ConnectedAccounts() {
-  const query = useSampleAccounts()
+  const query = useSocialAccounts()
 
   return (
     <Card aria-labelledby="connected-accounts" className="flex flex-col">
@@ -28,7 +20,7 @@ export function ConnectedAccounts() {
         id="connected-accounts"
         title="Connected accounts"
         description="Where your videos can be posted."
-        action={<SampleBadge />}
+        action={<Badge tone="ok">Live</Badge>}
       />
       {query.isPending && (
         <div role="status" aria-label="Loading connected accounts" className="divide-y divide-line">
@@ -51,20 +43,28 @@ export function ConnectedAccounts() {
           icon={Link2}
           title="No accounts connected"
           description="Connect Facebook, Instagram or YouTube to publish your videos."
+          action={
+            <Link to="/accounts" className={buttonClasses('primary', 'sm')}>
+              Connect an account
+            </Link>
+          }
         />
       )}
       {query.isSuccess && query.data.length > 0 && (
         <ul className="divide-y divide-line">
-          {query.data.map((account) => {
-            const status = STATUS[account.status]
+          {query.data.slice(0, 5).map((account) => {
+            const badge = accountBadge(account)
             return (
-              <li key={account.platform} className="flex items-center gap-3 px-5 py-3.5">
+              <li key={account.id} className="flex items-center gap-3 px-5 py-3.5">
                 <PlatformMark platform={account.platform} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{PLATFORM_NAMES[account.platform]}</p>
-                  <p className="truncate text-sm text-muted">{account.handle ?? 'Not connected'}</p>
+                  <p className="truncate text-sm font-medium">{account.name}</p>
+                  <p className="truncate text-sm text-muted">
+                    {PLATFORM_COPY[account.platform].name}
+                    {account.username ? ` · ${account.username}` : ''}
+                  </p>
                 </div>
-                <Badge tone={status.tone}>{status.label}</Badge>
+                <Badge tone={badge.tone}>{badge.label}</Badge>
               </li>
             )
           })}

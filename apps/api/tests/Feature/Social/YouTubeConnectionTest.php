@@ -77,7 +77,7 @@ class YouTubeConnectionTest extends SocialTestCase
         [, $query] = $this->startConnect($user, 'youtube');
         $verifier = OAuthState::query()->firstOrFail()->code_verifier;
 
-        $this->callback($user, 'youtube', ['code' => 'g-code', 'state' => $query['state']])->assertOk();
+        $this->postCallback($user, 'youtube', ['code' => 'g-code', 'state' => $query['state']])->assertOk();
 
         Http::assertSent(fn (Request $request) => $request->url() === 'https://oauth2.googleapis.com/token'
             && $request['code'] === 'g-code'

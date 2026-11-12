@@ -125,7 +125,7 @@ class ConnectionStartTest extends SocialTestCase
         Http::fake();
         $user = $this->member();
 
-        $this->callback($user, 'facebook', ['code' => 'c', 'state' => 'never-issued'])
+        $this->postCallback($user, 'facebook', ['code' => 'c', 'state' => 'never-issued'])
             ->assertStatus(400)
             ->assertJsonPath('code', 'invalid_oauth_state');
 
@@ -138,7 +138,7 @@ class ConnectionStartTest extends SocialTestCase
         Http::fake();
         [, $query] = $this->startConnect($this->member(), 'facebook');
 
-        $this->callback($this->member(), 'facebook', ['code' => 'c', 'state' => $query['state']])
+        $this->postCallback($this->member(), 'facebook', ['code' => 'c', 'state' => $query['state']])
             ->assertStatus(400)
             ->assertJsonPath('code', 'invalid_oauth_state');
 
@@ -151,7 +151,7 @@ class ConnectionStartTest extends SocialTestCase
         $user = $this->member();
         [, $query] = $this->startConnect($user, 'instagram');
 
-        $this->callback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])
+        $this->postCallback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])
             ->assertStatus(400)
             ->assertJsonPath('code', 'invalid_oauth_state');
 
@@ -166,7 +166,7 @@ class ConnectionStartTest extends SocialTestCase
 
         $this->travel(11)->minutes();
 
-        $this->callback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])
+        $this->postCallback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])
             ->assertStatus(400)
             ->assertJsonPath('code', 'invalid_oauth_state');
 
@@ -180,9 +180,9 @@ class ConnectionStartTest extends SocialTestCase
 
         // First use: the provider rejects the (fake) code, but the state is burned either way.
         Http::fake(['graph.facebook.com/*' => Http::response(['error' => ['message' => 'bad code', 'type' => 'OAuthException', 'code' => 100]], 400)]);
-        $this->callback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])->assertStatus(400);
+        $this->postCallback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])->assertStatus(400);
 
-        $this->callback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])
+        $this->postCallback($user, 'facebook', ['code' => 'c', 'state' => $query['state']])
             ->assertStatus(400)
             ->assertJsonPath('code', 'invalid_oauth_state');
     }
@@ -193,7 +193,7 @@ class ConnectionStartTest extends SocialTestCase
         $user = $this->member();
         [, $query] = $this->startConnect($user, 'facebook');
 
-        $this->callback($user, 'facebook', ['state' => $query['state'], 'error' => 'access_denied'])
+        $this->postCallback($user, 'facebook', ['state' => $query['state'], 'error' => 'access_denied'])
             ->assertStatus(400)
             ->assertJsonPath('code', 'authorization_denied');
 
@@ -208,14 +208,14 @@ class ConnectionStartTest extends SocialTestCase
         $user = $this->member();
         [, $query] = $this->startConnect($user, 'facebook');
 
-        $this->callback($user, 'facebook', ['state' => $query['state']])
+        $this->postCallback($user, 'facebook', ['state' => $query['state']])
             ->assertStatus(400)
             ->assertJsonPath('code', 'authorization_denied');
     }
 
     public function test_the_callback_requires_a_state(): void
     {
-        $this->callback($this->member(), 'facebook', ['code' => 'c'])
+        $this->postCallback($this->member(), 'facebook', ['code' => 'c'])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['state'], 'errors');
     }

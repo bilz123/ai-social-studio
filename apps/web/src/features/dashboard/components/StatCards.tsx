@@ -1,11 +1,32 @@
 import { Film, FolderKanban, Link2, Send } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { useSocialAccounts } from '@/features/social/useSocial'
+import { Badge } from '@/shared/ui/Badge'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import { ErrorState } from '@/shared/ui/ErrorState'
 import { useSampleStats } from '../data/useSample'
-import { SampleBadge } from './SampleBadge'
 
 export function StatCards() {
   const query = useSampleStats()
+  const accounts = useSocialAccounts()
+
+  // The connected accounts tile is real; the other three are still sample numbers.
+  const accountsTile: { value: ReactNode; note: string } = accounts.isSuccess
+    ? (() => {
+        const needAttention = accounts.data.filter((account) => account.status !== 'active').length
+        return {
+          value: accounts.data.length,
+          note:
+            accounts.data.length === 0
+              ? 'None connected yet'
+              : needAttention > 0
+                ? `${needAttention} need${needAttention === 1 ? 's' : ''} attention`
+                : 'All working',
+        }
+      })()
+    : accounts.isError
+      ? { value: '–', note: 'Could not load' }
+      : { value: <Skeleton className="h-8 w-10" />, note: 'Loading…' }
 
   if (query.isError) {
     return (
@@ -21,7 +42,7 @@ export function StatCards() {
         { label: 'Projects', icon: FolderKanban, ...stats.projects },
         { label: 'Videos generated', icon: Film, ...stats.videos },
         { label: 'Posts published', icon: Send, ...stats.published },
-        { label: 'Connected accounts', icon: Link2, ...stats.accounts },
+        { label: 'Connected accounts', icon: Link2, ...accountsTile },
       ]
     : null
 
@@ -50,7 +71,7 @@ export function StatCards() {
             ))}
       </dl>
       <div className="mt-2 flex justify-end">
-        <SampleBadge />
+        <Badge tone="warn">Projects, videos and posts are sample data</Badge>
       </div>
     </section>
   )

@@ -8,9 +8,10 @@ import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+import { ConnectedAccountsPage } from '@/features/social/pages/ConnectedAccountsPage'
+import { ConnectionCallbackPage } from '@/features/social/pages/ConnectionCallbackPage'
 import {
   AnalyticsPage,
-  ConnectedAccountsPage,
   CreateVideoPage,
   MyVideosPage,
   PublishingHistoryPage,
@@ -55,6 +56,7 @@ export const routes = [
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/create', element: <CreateVideoPage /> },
           { path: '/accounts', element: <ConnectedAccountsPage /> },
+          { path: '/connections/callback/:platform', element: <ConnectionCallbackPage /> },
           { path: '/videos', element: <MyVideosPage /> },
           { path: '/history', element: <PublishingHistoryPage /> },
           { path: '/scheduled', element: <ScheduledPostsPage /> },

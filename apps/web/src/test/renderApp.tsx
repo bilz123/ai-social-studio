@@ -66,4 +66,5 @@ export const emptyActivity = () => jsonResponse({ data: [] })
 export const signedInHandlers = (): Record<string, Handler> => ({
   'GET /v1/auth/me': () => jsonResponse({ data: sampleUser }),
   'GET /v1/account/activity': emptyActivity,
+  'GET /v1/social/accounts': () => jsonResponse({ data: [] }),
 })

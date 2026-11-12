@@ -6,4 +6,13 @@ export const ACTION_LABELS: Record<string, string> = {
   'auth.password_reset': 'Password reset',
   'account.profile_updated': 'Profile updated',
   'account.password_changed': 'Password changed',
+  'social.connect.started': 'Started connecting a social account',
+  'social.connect.failed': 'Connecting a social account failed',
+  'social.connect.unavailable': 'Social platform not set up',
+  'social.account.connected': 'Social account connected',
+  'social.account.disconnected': 'Social account disconnected',
+  'social.account.updated': 'Social account updated',
+  'social.account.checked': 'Social connection checked',
+  'social.account.needs_reconnect': 'Social account needs reconnecting',
+  'social.token.refreshed': 'Social access renewed',
 }

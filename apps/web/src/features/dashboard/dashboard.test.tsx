@@ -16,7 +16,7 @@ describe('dashboard', () => {
     expect(await within(videos).findByText('Pour-over set, slow orbit')).toBeInTheDocument()
     expect(within(videos).getByText('Awaiting approval')).toBeInTheDocument()
 
-    for (const name of ['Recent projects', 'Connected accounts', 'Publishing activity']) {
+    for (const name of ['Recent projects', 'Publishing activity']) {
       const card = await screen.findByRole('region', { name })
       expect(within(card).getByText('Sample data')).toBeInTheDocument()
     }
@@ -51,6 +51,78 @@ describe('dashboard', () => {
     expect(await within(card).findByText('Signed in')).toBeInTheDocument()
     expect(within(card).getByText('Password changed')).toBeInTheDocument()
     expect(within(card).getByText('Live')).toBeInTheDocument()
+  })
+
+  it('shows the real connected accounts, or a prompt to connect one', async () => {
+    mockApi({
+      ...signedInHandlers(),
+      'GET /v1/social/accounts': () =>
+        jsonResponse({
+          data: [
+            {
+              id: '01ACC1',
+              platform: 'youtube',
+              provider: 'google',
+              name: 'Acme Coffee',
+              username: '@acmecoffee',
+              avatar_url: null,
+              status: 'active',
+              status_reason: null,
+              is_enabled: true,
+              capabilities: {},
+              profile: {},
+              permissions: { granted: [], missing: [] },
+              token: { present: true, expires_at: null, has_refresh_token: true, last_error: null },
+              connected_at: null,
+              last_checked_at: null,
+              last_publish_at: null,
+            },
+            {
+              id: '01ACC2',
+              platform: 'instagram',
+              provider: 'instagram',
+              name: 'Acme Reels',
+              username: 'acme.reels',
+              avatar_url: null,
+              status: 'needs_reconnect',
+              status_reason: 'Instagram no longer accepts this connection. Reconnect the account.',
+              is_enabled: true,
+              capabilities: {},
+              profile: {},
+              permissions: { granted: [], missing: [] },
+              token: {
+                present: true,
+                expires_at: null,
+                has_refresh_token: false,
+                last_error: null,
+              },
+              connected_at: null,
+              last_checked_at: null,
+              last_publish_at: null,
+            },
+          ],
+        }),
+    })
+    renderApp('/dashboard')
+
+    const card = await screen.findByRole('region', { name: 'Connected accounts' })
+    expect(await within(card).findByText('Acme Coffee')).toBeInTheDocument()
+    expect(within(card).getByText('Connected')).toBeInTheDocument()
+    expect(within(card).getByText('Needs reconnect')).toBeInTheDocument()
+    expect(within(card).queryByText('Sample data')).not.toBeInTheDocument()
+    expect(await screen.findByText('1 needs attention')).toBeInTheDocument()
+  })
+
+  it('invites the person to connect an account when there are none', async () => {
+    mockApi(signedInHandlers())
+    renderApp('/dashboard')
+
+    const card = await screen.findByRole('region', { name: 'Connected accounts' })
+    expect(await within(card).findByText('No accounts connected')).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: 'Connect an account' })).toHaveAttribute(
+      'href',
+      '/accounts',
+    )
   })
 
   it('shows an empty state when there is no account activity', async () => {

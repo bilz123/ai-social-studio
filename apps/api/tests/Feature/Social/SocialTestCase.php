@@ -57,7 +57,7 @@ abstract class SocialTestCase extends TestCase
     }
 
     /** @param  array<string, mixed>  $payload */
-    protected function callback(User $user, string $platform, array $payload): TestResponse
+    protected function postCallback(User $user, string $platform, array $payload): TestResponse
     {
         return $this->actingAs($user)->postJson("/api/v1/social/{$platform}/callback", $payload);
     }
@@ -69,7 +69,7 @@ abstract class SocialTestCase extends TestCase
     {
         [, $query] = $this->startConnect($user, $platform);
 
-        return $this->callback($user, $platform, ['code' => $code, 'state' => $query['state']]);
+        return $this->postCallback($user, $platform, ['code' => $code, 'state' => $query['state']]);
     }
 
     /** @return array<string, string> */

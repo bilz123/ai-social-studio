@@ -1,4 +1,4 @@
-import { BarChart3, CalendarClock, Clapperboard, Film, History, Link2 } from 'lucide-react'
+import { BarChart3, CalendarClock, Clapperboard, Film, History } from 'lucide-react'
 import { SectionPlaceholderPage } from './SectionPlaceholderPage'
 
 export const CreateVideoPage = () => (
@@ -8,16 +8,6 @@ export const CreateVideoPage = () => (
     icon={Clapperboard}
     emptyTitle="Video creation is not available yet"
     emptyDescription="You will upload images, describe the product and preview the result here before approving it."
-  />
-)
-
-export const ConnectedAccountsPage = () => (
-  <SectionPlaceholderPage
-    title="Connected Accounts"
-    description="Link the Facebook, Instagram and YouTube accounts you publish to."
-    icon={Link2}
-    emptyTitle="Account connections are not available yet"
-    emptyDescription="Sign-in with each platform and the list of your connected accounts will live here."
   />
 )
 

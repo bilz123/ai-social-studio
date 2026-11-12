@@ -1,14 +1,15 @@
 import { cn } from '@/shared/lib/cn'
-import type { PlatformId } from '../data/sampleData'
 
-const marks: Record<PlatformId, string> = { facebook: 'Fb', instagram: 'Ig', youtube: 'Yt' }
+export type PlatformMarkId = 'facebook' | 'instagram' | 'youtube'
 
-/** Neutral monogram tile (the icon set has no brand logos; official marks come with the connect flow). */
+const marks: Record<PlatformMarkId, string> = { facebook: 'Fb', instagram: 'Ig', youtube: 'Yt' }
+
+/** Neutral monogram tile (the icon set has no brand logos; official marks need brand approval). */
 export function PlatformMark({
   platform,
   className,
 }: {
-  platform: PlatformId
+  platform: PlatformMarkId
   className?: string
 }) {
   return (
