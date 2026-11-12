@@ -55,6 +55,14 @@ x-api-env: &api-env
   AI_SERVICE_URL: http://ai-api:8000
   AI_HMAC_SECRET_LARAVEL_TO_AI: ${AI_HMAC_SECRET_LARAVEL_TO_AI:?AI_HMAC_SECRET_LARAVEL_TO_AI is empty - run `make init`}
   AI_HMAC_SECRET_AI_TO_LARAVEL: ${AI_HMAC_SECRET_AI_TO_LARAVEL:?AI_HMAC_SECRET_AI_TO_LARAVEL is empty - run `make init`}
+  # Social platform developer credentials: optional; an empty value disables that platform.
+  META_APP_ID: ${META_APP_ID:-}
+  META_APP_SECRET: ${META_APP_SECRET:-}
+  META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v26.0}
+  INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID:-}
+  INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET:-}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
 
 x-api-build: &api-build
   context: ../..

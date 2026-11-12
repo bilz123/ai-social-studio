@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Account;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Account\DeleteAccountRequest;
 use App\Services\AuditLogger;
+use App\Services\Social\SocialConnectionService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,12 +14,14 @@ class AccountController extends Controller
 {
     /**
      * Permanently deletes the signed-in user and everything they own. Foreign keys cascade to
-     * projects, images, jobs, videos, social accounts and (encrypted) tokens. Revoking tokens at
-     * the social providers is added with the OAuth integration (Phase 4).
+     * projects, images, jobs, videos, social accounts and (encrypted) tokens. Grants at the
+     * social providers are revoked first, best effort.
      */
-    public function destroy(DeleteAccountRequest $request, AuditLogger $audit): Response
+    public function destroy(DeleteAccountRequest $request, AuditLogger $audit, SocialConnectionService $social): Response
     {
         $user = $request->user();
+
+        $social->revokeAllFor($user);
 
         Auth::guard('web')->logout();
 

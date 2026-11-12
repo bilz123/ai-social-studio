@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Social\SocialIntegrationRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(SocialIntegrationRegistry::class);
     }
 
     /**
@@ -105,6 +106,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Password change, email change, account deletion.
         RateLimiter::for('sensitive', fn (Request $request) => Limit::perMinute(5)->by($this->actorKey($request)));
+
+        // Starting / finishing an OAuth connection, and managing connected accounts.
+        RateLimiter::for('social-connect', fn (Request $request) => Limit::perMinute(10)->by($this->actorKey($request)));
+        RateLimiter::for('social-manage', fn (Request $request) => Limit::perMinute(30)->by($this->actorKey($request)));
     }
 
     private function actorKey(Request $request): string

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\SocialIntegrationException;
 use App\Http\Middleware\AssignRequestId;
 use App\Support\Problem\ProblemRenderer;
 use Illuminate\Foundation\Application;
@@ -40,6 +41,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request): bool => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Expected, user-facing failures; provider errors are logged by the integration itself.
+        $exceptions->dontReport(SocialIntegrationException::class);
 
         // Every API error is RFC 9457 problem+json with a stable machine-readable code.
         $exceptions->render(

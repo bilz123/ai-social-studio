@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SocialPlatform;
 use App\Http\Controllers\Api\V1\Account\AccountController;
 use App\Http\Controllers\Api\V1\Account\ActivityController;
 use App\Http\Controllers\Api\V1\Account\PasswordController;
@@ -12,6 +13,9 @@ use App\Http\Controllers\Api\V1\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\Social\SocialAccountController;
+use App\Http\Controllers\Api\V1\Social\SocialConnectionController;
+use App\Http\Controllers\Api\V1\Social\SocialPlatformController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'live'])->name('health.live');
@@ -56,4 +60,28 @@ Route::middleware('auth:sanctum')->prefix('account')->name('account.')->group(fu
 // Administration: access is decided by permissions, never by "is this the same user".
 Route::middleware(['auth:sanctum', 'can:users.view'])->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/users', UserIndexController::class)->name('users.index');
+});
+
+/*
+| Connected social accounts (Facebook Pages, Instagram, YouTube). OAuth: the SPA calls
+| POST /{platform}/connect, sends the user to the returned provider URL, receives the provider
+| redirect on /connections/callback/{platform} and forwards code + state to POST /{platform}/callback.
+*/
+Route::middleware(['auth:sanctum', 'can:social-accounts.manage'])->prefix('social')->name('social.')->group(function (): void {
+    Route::get('/platforms', [SocialPlatformController::class, 'index'])->name('platforms.index');
+
+    Route::get('/accounts', [SocialAccountController::class, 'index'])->name('accounts.index');
+    Route::patch('/accounts/{account}', [SocialAccountController::class, 'update'])
+        ->middleware('throttle:social-manage')->name('accounts.update');
+    Route::post('/accounts/{account}/check', [SocialAccountController::class, 'check'])
+        ->middleware('throttle:social-manage')->name('accounts.check');
+    Route::delete('/accounts/{account}', [SocialAccountController::class, 'destroy'])
+        ->middleware('throttle:social-manage')->name('accounts.destroy');
+
+    Route::post('/{platform}/connect', [SocialConnectionController::class, 'connect'])
+        ->whereIn('platform', SocialPlatform::slugs())
+        ->middleware('throttle:social-connect')->name('connect');
+    Route::post('/{platform}/callback', [SocialConnectionController::class, 'callback'])
+        ->whereIn('platform', SocialPlatform::slugs())
+        ->middleware('throttle:social-connect')->name('callback');
 });

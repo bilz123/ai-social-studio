@@ -2,6 +2,7 @@
 
 namespace App\Support\Problem;
 
+use App\Exceptions\SocialIntegrationException;
 use App\Http\Middleware\AssignRequestId;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -60,6 +61,11 @@ class ProblemRenderer
 
         if ($e instanceof AuthenticationException) {
             return [401, 'unauthenticated', 'Authentication is required.', null, []];
+        }
+
+        if ($e instanceof SocialIntegrationException) {
+            // The message is written for end users; provider details stay in the log.
+            return [$e->status, $e->errorCode, $e->getMessage(), null, []];
         }
 
         if ($e instanceof HttpExceptionInterface) {
