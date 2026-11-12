@@ -10,7 +10,6 @@ use App\Models\ProjectImage;
 use App\Models\PublishedPost;
 use App\Models\PublishingJob;
 use App\Models\ScheduledPost;
-use App\Models\SocialAccount;
 use App\Models\SocialToken;
 use App\Models\User;
 use App\Models\VideoGenerationJob;
