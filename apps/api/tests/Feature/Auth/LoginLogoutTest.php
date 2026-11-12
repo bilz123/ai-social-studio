@@ -44,7 +44,7 @@ class LoginLogoutTest extends TestCase
         $wrongPassword->assertStatus(422)->assertJsonPath('code', 'validation_failed');
         $unknownEmail->assertStatus(422)->assertJsonPath('code', 'validation_failed');
         $this->assertSame($wrongPassword->json('errors'), $unknownEmail->json('errors'));
-        $this->assertGuest();
+        $this->assertGuest('web');
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.login_failed']);
     }
 
@@ -57,7 +57,7 @@ class LoginLogoutTest extends TestCase
         $this->spa()->postJson('/api/v1/auth/login', ['email' => 'ada@example.com', 'password' => "' OR '1'='1' --"])
             ->assertStatus(422);
 
-        $this->assertGuest();
+        $this->assertGuest('web');
         $this->assertDatabaseHas('users', ['id' => $user->id]);
         $this->assertSame(1, User::query()->count());
     }
@@ -76,7 +76,7 @@ class LoginLogoutTest extends TestCase
             ->assertStatus(429)
             ->assertJsonPath('code', 'rate_limited')
             ->assertHeader('Retry-After');
-        $this->assertGuest();
+        $this->assertGuest('web');
     }
 
     public function test_login_is_refused_outside_the_web_app(): void
@@ -85,7 +85,7 @@ class LoginLogoutTest extends TestCase
 
         $this->postJson('/api/v1/auth/login', ['email' => 'ada@example.com', 'password' => self::PASSWORD])
             ->assertStatus(400);
-        $this->assertGuest();
+        $this->assertGuest('web');
     }
 
     public function test_login_requires_a_csrf_token_in_a_real_environment(): void
@@ -98,7 +98,7 @@ class LoginLogoutTest extends TestCase
         $this->spa()->postJson('/api/v1/auth/login', ['email' => 'ada@example.com', 'password' => self::PASSWORD])
             ->assertStatus(419)
             ->assertJsonPath('code', 'csrf_token_mismatch');
-        $this->assertGuest();
+        $this->assertGuest('web');
     }
 
     public function test_me_requires_authentication(): void
@@ -121,7 +121,7 @@ class LoginLogoutTest extends TestCase
 
         $this->actingAs($user)->spa()->postJson('/api/v1/auth/logout')->assertNoContent();
 
-        $this->assertGuest();
+        $this->assertGuest('web');
         $this->assertDatabaseHas('audit_logs', ['user_id' => $user->id, 'action' => 'auth.logout']);
     }
 

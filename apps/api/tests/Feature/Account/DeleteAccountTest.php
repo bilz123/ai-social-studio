@@ -57,7 +57,7 @@ class DeleteAccountTest extends TestCase
 
         $this->actingAs($user)->deleteJson('/api/v1/account', ['password' => self::PASSWORD])->assertNoContent();
 
-        $this->assertGuest();
+        $this->assertGuest('web');
         $this->assertDatabaseMissing('users', ['id' => $user->id]);
         $this->assertDatabaseCount('projects', 1);
         $this->assertDatabaseHas('projects', ['id' => $otherProject->id]);

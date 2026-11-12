@@ -108,7 +108,9 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
         Accept: 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
         ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(mutating && readCookie(CSRF_COOKIE) ? { [CSRF_HEADER]: readCookie(CSRF_COOKIE) ?? '' } : {}),
+        ...(mutating && readCookie(CSRF_COOKIE)
+          ? { [CSRF_HEADER]: readCookie(CSRF_COOKIE) ?? '' }
+          : {}),
         ...headers,
       },
       body: json !== undefined ? JSON.stringify(json) : undefined,

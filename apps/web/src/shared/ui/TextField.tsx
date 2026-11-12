@@ -8,7 +8,14 @@ interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id
   hint?: string
 }
 
-export function TextField({ label, error, hint, type = 'text', className, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  hint,
+  type = 'text',
+  className,
+  ...rest
+}: TextFieldProps) {
   const id = useId()
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
