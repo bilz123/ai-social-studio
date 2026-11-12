@@ -20,6 +20,7 @@
     <!-- force="true": tests must never pick up the real DB/Redis settings of a Docker container. -->
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_KEY" value="base64:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=" force="true"/>
         <env name="APP_DEBUG" value="false" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>
