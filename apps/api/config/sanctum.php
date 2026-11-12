@@ -2,7 +2,7 @@
 
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
-use Illuminate\Session\Middleware\AuthenticateSession;
+use App\Http\Middleware\AuthenticateWebSession;
 
 return [
 
@@ -28,7 +28,7 @@ return [
 
     'middleware' => [
         // Signs the user out of other devices when the password changes.
-        'authenticate_session' => AuthenticateSession::class,
+        'authenticate_session' => AuthenticateWebSession::class,
         'encrypt_cookies' => EncryptCookies::class,
         'validate_csrf_token' => ValidateCsrfToken::class,
     ],

@@ -1,10 +1,117 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/figtree';
+
+/*
+ * Palette: aubergine ink for structure, tungsten amber for the one thing that should glow
+ * (the studio light), a cool lavender paper to work on. Components use the semantic tokens below,
+ * never raw colors, so light and dark stay in step.
+ */
+:root {
+  --surface: #f6f4fb;
+  --raised: #ffffff;
+  --sunken: #ece8f6;
+  --line: #d9d2ea;
+  --text: #1b1030;
+  --muted: #5b4f7d;
+  --brand: #2e1a57;
+  --brand-hover: #3d2672;
+  --brand-contrast: #ffffff;
+  --accent: #f5a524;
+  --focus: #6b3fd6;
+  --danger: #a8203a;
+  --danger-bg: #fbe8ec;
+  --ok: #0f6e61;
+  --ok-bg: #dff3ee;
+  --info-bg: #ece8f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #140b25;
+    --raised: #1d1235;
+    --sunken: #100820;
+    --line: #35285c;
+    --text: #f1edfa;
+    --muted: #aa9fc8;
+    --brand: #f5a524;
+    --brand-hover: #ffb84a;
+    --brand-contrast: #2a1700;
+    --focus: #b79cff;
+    --danger: #ff8fa3;
+    --danger-bg: #3a1220;
+    --ok: #62d6c2;
+    --ok-bg: #0f2c29;
+    --info-bg: #231845;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-accent: var(--accent);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-info-bg: var(--info-bg);
+  --font-display: 'Bricolage Grotesque Variable', 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-sans: 'Figtree Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+}
 
 @layer base {
   html {
     color-scheme: light dark;
   }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-surface text-ink font-sans antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/* The studio light: slow drifting glows inside the vertical frame. */
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate3d(-8%, -4%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(10%, 8%, 0) scale(1.15);
+  }
+}
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate3d(8%, 10%, 0) scale(1.1);
+  }
+  50% {
+    transform: translate3d(-10%, -6%, 0) scale(0.95);
+  }
+}
+@keyframes run-ten-seconds {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift-a,
+  .animate-drift-b,
+  .animate-run {
+    animation: none !important;
   }
 }

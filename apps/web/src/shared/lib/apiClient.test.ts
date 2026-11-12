@@ -9,8 +9,13 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   })
 }
 
+function clearCookies() {
+  document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  clearCookies()
 })
 
 describe('apiFetch', () => {
@@ -29,6 +34,7 @@ describe('apiFetch', () => {
   })
 
   it('serializes json bodies and sets the content type', async () => {
+    document.cookie = 'XSRF-TOKEN=token'
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -134,5 +140,75 @@ describe('apiFetch', () => {
     )) as ApiError
 
     expect(error).toMatchObject({ status: 0, code: 'timeout' })
+  })
+
+  describe('CSRF protection', () => {
+    it('does not fetch or send a CSRF token for GET requests', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}))
+      vi.stubGlobal('fetch', fetchMock)
+
+      await apiFetch('/v1/auth/me')
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+      expect(init.headers).not.toHaveProperty('X-XSRF-TOKEN')
+    })
+
+    it('fetches the CSRF cookie first when it is missing, then echoes it in a header', async () => {
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url === '/api/sanctum/csrf-cookie') {
+          document.cookie = 'XSRF-TOKEN=abc%3D%3D'
+          return new Response(null, { status: 204 })
+        }
+        return jsonResponse({ ok: true })
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await apiFetch('/v1/auth/login', { method: 'POST', json: { email: 'a@b.co' } })
+
+      expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+        '/api/sanctum/csrf-cookie',
+        '/api/v1/auth/login',
+      ])
+      const init = fetchMock.mock.calls[1]?.[1] as RequestInit
+      expect(init.headers).toMatchObject({ 'X-XSRF-TOKEN': 'abc==' })
+    })
+
+    it('refreshes the token and retries once when the server answers 419', async () => {
+      document.cookie = 'XSRF-TOKEN=stale'
+      let attempts = 0
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url === '/api/sanctum/csrf-cookie') {
+          document.cookie = 'XSRF-TOKEN=fresh'
+          return new Response(null, { status: 204 })
+        }
+        attempts += 1
+        return attempts === 1
+          ? jsonResponse({ code: 'csrf_token_mismatch' }, { status: 419 })
+          : jsonResponse({ ok: true })
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(apiFetch('/v1/auth/logout', { method: 'POST' })).resolves.toEqual({ ok: true })
+
+      const retried = fetchMock.mock.calls.at(-1)?.[1] as RequestInit
+      expect(retried.headers).toMatchObject({ 'X-XSRF-TOKEN': 'fresh' })
+      expect(attempts).toBe(2)
+    })
+
+    it('gives up after a single retry', async () => {
+      document.cookie = 'XSRF-TOKEN=stale'
+      const fetchMock = vi.fn(async (url: string) =>
+        url === '/api/sanctum/csrf-cookie'
+          ? new Response(null, { status: 204 })
+          : jsonResponse({ code: 'csrf_token_mismatch' }, { status: 419 }),
+      )
+      vi.stubGlobal('fetch', fetchMock)
+
+      const error = await apiFetch('/v1/auth/logout', { method: 'POST' }).catch((e: unknown) => e)
+
+      expect(error).toMatchObject({ status: 419, code: 'csrf_token_mismatch' })
+      expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/auth/logout')).toHaveLength(2)
+    })
   })
 })

@@ -78,7 +78,8 @@ class OwnershipTest extends TestCase
 
         $this->assertSame([$alice->id], Project::query()->ownedBy($alice)->pluck('user_id')->unique()->values()->all());
         $this->assertSame(1, VideoGenerationJob::query()->ownedBy($bob)->count());
-        $this->assertSame(1, SocialAccount::query()->ownedBy($alice)->count());
+        // One destination account for the publishing job and one for the scheduled post.
+        $this->assertSame(2, SocialAccount::query()->ownedBy($alice)->count());
         $this->assertSame(1, $alice->publishingJobs()->count());
         $this->assertSame(1, $bob->scheduledPosts()->count());
     }

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\User;
 use App\Support\Auth\RoleCatalog;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /** @extends Factory<User> */
 class UserFactory extends Factory
@@ -18,6 +19,10 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
+            // Set every column so a just-created model behaves like one loaded from the database
+            // (strict mode refuses to read attributes that were never loaded).
+            'remember_token' => Str::random(10),
+            'last_login_at' => null,
             // Plain text: the model's "hashed" cast hashes it on save.
             'password' => 'Str0ng-Passw0rd!',
         ];

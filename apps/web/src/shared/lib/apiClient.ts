@@ -50,6 +50,29 @@ function joinUrl(path: string): string {
   return `${env.apiBaseUrl}/${path.replace(/^\/+/, '')}`
 }
 
+const CSRF_COOKIE = 'XSRF-TOKEN'
+const CSRF_HEADER = 'X-XSRF-TOKEN'
+
+function readCookie(name: string): string | null {
+  const prefix = `${name}=`
+  for (const part of document.cookie.split('; ')) {
+    if (part.startsWith(prefix)) return decodeURIComponent(part.slice(prefix.length))
+  }
+  return null
+}
+
+/**
+ * Laravel Sanctum's SPA protection: the API hands out an XSRF cookie, and every state-changing
+ * request must echo it back in a header. The cookie is readable by design (it is not the session
+ * and carries no authority on its own); the session cookie stays HttpOnly.
+ */
+async function refreshCsrfCookie(): Promise<void> {
+  await fetch(joinUrl('sanctum/csrf-cookie'), {
+    credentials: 'include',
+    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+  })
+}
+
 async function parseBody(response: Response): Promise<unknown> {
   const text = await response.text()
   if (!text) return null
@@ -74,9 +97,10 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
   const onAbort = () => controller.abort()
   signal?.addEventListener('abort', onAbort)
 
-  let response: Response
-  try {
-    response = await fetch(joinUrl(path), {
+  const mutating = method !== 'GET'
+
+  const send = async (): Promise<Response> =>
+    fetch(joinUrl(path), {
       method,
       credentials: 'include',
       signal: controller.signal,
@@ -84,10 +108,21 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
         Accept: 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
         ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(mutating && readCookie(CSRF_COOKIE) ? { [CSRF_HEADER]: readCookie(CSRF_COOKIE) ?? '' } : {}),
         ...headers,
       },
       body: json !== undefined ? JSON.stringify(json) : undefined,
     })
+
+  let response: Response
+  try {
+    if (mutating && !readCookie(CSRF_COOKIE)) await refreshCsrfCookie()
+    response = await send()
+    if (mutating && response.status === 419) {
+      // The CSRF token expired or was rotated (for example after login): get a fresh one, retry once.
+      await refreshCsrfCookie()
+      response = await send()
+    }
   } catch {
     const aborted = controller.signal.aborted
     throw new ApiError({

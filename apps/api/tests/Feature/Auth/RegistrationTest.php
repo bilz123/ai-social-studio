@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use App\Notifications\Auth\VerifyEmailNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -85,6 +86,9 @@ class RegistrationTest extends TestCase
 
     public function test_validation_rejects_bad_input(): void
     {
+        // Many attempts in one test: rate limiting has its own test.
+        $this->withoutMiddleware(ThrottleRequests::class);
+
         $cases = [
             'missing everything' => [[], ['name', 'email', 'password']],
             'weak password' => [['password' => 'password', 'password_confirmation' => 'password'], ['password']],
