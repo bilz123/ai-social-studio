@@ -144,6 +144,21 @@ MVP accepts only `duration_seconds = 10`; the field exists so other durations ar
 
 ## 7. Social connections
 
+### 7.0 Phase 4 as built (user-scoped; supersedes the workspace routes below until workspaces exist)
+
+All routes need a session (`auth:sanctum`) and the `social-accounts.manage` permission (the `member` role has it). Responses use the usual `{data: …}` resource wrapper; errors are problem+json (codes in [SOCIAL_MEDIA_INTEGRATION §0](SOCIAL_MEDIA_INTEGRATION.md)).
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/social/platforms` | `[{id: facebook|instagram|youtube, name, provider, configured, supports_refresh, required_permissions, connected_count, missing_configuration?}]`. `missing_configuration` (env var names) is omitted in production. |
+| POST | `/api/v1/social/{platform}/connect` | `503 integration_not_configured` when credentials are missing. Else `{authorization_url, expires_at}`; the SPA navigates there. Throttle `social-connect` (10/min). |
+| POST | `/api/v1/social/{platform}/callback` | Body `{state, code?, error?}` (what the provider put on the SPA redirect). Validates and burns the state, exchanges the code, stores accounts. Returns the connected accounts. |
+| GET | `/api/v1/social/accounts` | The user's accounts: `id, platform, provider, name, username, avatar_url, status, status_reason, is_enabled, capabilities, profile, permissions{granted,missing}, token{present,expires_at,has_refresh_token,last_error}, connected_at, last_checked_at, last_publish_at`. Never any token value. |
+| PATCH | `/api/v1/social/accounts/{id}` | `{is_enabled}`; owner only. |
+| POST | `/api/v1/social/accounts/{id}/check` | Renews the token if due, re-reads profile and permissions. `409` problem when the provider no longer accepts the connection (account becomes `needs_reconnect`). |
+| DELETE | `/api/v1/social/accounts/{id}` | Revokes at the provider where possible (Google), deletes credentials, soft-deletes the account. `204`. |
+
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/workspaces/{ws}/social/providers` | `[{provider:"meta", platforms:["facebook_page","instagram_business"]},{provider:"google", platforms:["youtube_channel"]}]` |

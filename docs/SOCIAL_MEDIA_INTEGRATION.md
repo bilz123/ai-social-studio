@@ -1,9 +1,42 @@
 # Social Media Integration (Facebook · Instagram · YouTube)
 
-**Status:** Draft v0.1 · Design only
+**Status:** Draft v0.1 design, with the **Phase 4 as-built** section below (read that first; where it differs from the rest of this document, it wins)
 Related: [PROJECT_ARCHITECTURE](PROJECT_ARCHITECTURE.md) · [API_DESIGN §7–8, §11.2](API_DESIGN.md) · [DATABASE_DESIGN §3.6–3.7](DATABASE_DESIGN.md)
 
 > **Verification status.** Items tagged ✅ were checked against Meta's official developer docs on 2026-11-12 (Instagram content publishing; Facebook Reels publishing). Items tagged ⚠️ are from prior knowledge and **must be re-verified against current official docs before implementation** — Google's YouTube docs could not be fetched while writing this, and permission names/versions/quotas on both platforms change. Treat Graph API version as a config value (`META_GRAPH_VERSION`), not a constant.
+
+
+## 0. Phase 4 as built
+
+Operator guide (credentials, redirect URIs, app review): [SOCIAL_PROVIDER_SETUP](SOCIAL_PROVIDER_SETUP.md).
+
+**What differs from the original design below**
+
+| Original design | As built | Why |
+|---|---|---|
+| One `meta` provider for Facebook and Instagram, Instagram via a Facebook Page | Three providers: `meta` (Facebook Login, Pages), `instagram` (**Instagram API with Instagram Login**), `google` | Instagram's current flow signs in at instagram.com with its own app ID/secret and no Facebook Page. Scopes `instagram_business_basic` and `instagram_business_content_publish`. Only Business and Creator accounts work. |
+| Provider callback is a Laravel web route | Provider redirects to the **SPA** (`{FRONTEND_URL}/connections/callback/{platform}`), which POSTs `code` + `state` to `POST /api/v1/social/{platform}/callback` | Sanctum's session cookie belongs to the SPA origin; this keeps the API stateless-looking and CSRF-protected. |
+| Workspace-scoped routes | User-scoped routes (`/api/v1/social/...`) | Phase 2 chose per-user ownership. |
+| `connect` returns `authorize_url` | `authorization_url` + `expires_at` | naming only |
+| YouTube quota ≈ 6 uploads/day | **100 upload calls/day** per project (own quota bucket) | Google's current docs, see §5.4 (updated). |
+
+**Components** (`apps/api/app/...`)
+- `Contracts/Social/SocialIntegration` (connect, refresh, inspect, revoke, scopes, PKCE flag) and `PublishesVideo`.
+- `Services/Social/FacebookService`, `InstagramService`, `YouTubeService` on a shared `AbstractSocialService` (config, HTTP with timeouts and connection retries, one place that maps provider errors to `SocialIntegrationException`).
+- `OAuthStateService`: 256-bit `state`, stored only as a SHA-256 hash, bound to user and platform, 10-minute expiry, consumed atomically (single use). Google also uses PKCE (S256); the verifier is stored encrypted.
+- `SocialConnectionService` (begin / complete / disconnect / revoke-all-on-account-deletion) and `SocialTokenManager` (renew under a cache lock, inspect, permission tracking, reconnect detection).
+- Tokens live in `social_tokens` with Laravel's `encrypted` cast; they are hidden from serialization and never appear in API responses, logs or audit entries. Tokens are sent to providers in `Authorization` headers where the provider supports it.
+
+**Statuses**: `active`, `restricted` (token works but a required permission is missing), `needs_reconnect` (provider rejected the token, refresh failed, channel gone), `revoked` (disconnected). Temporary failures (network, 5xx, rate limits) never change the status.
+
+**Error codes** (problem+json `code`): `integration_not_configured` (503), `invalid_oauth_state` (400), `authorization_denied` (400), `authorization_failed` (400), `missing_permissions` (422), `account_not_eligible` (422), `token_rejected` / `account_unavailable` / `reconnect_required` (409), `provider_rate_limited` (429), `provider_unavailable` / `provider_error` (502). Messages are written for end users; provider details go to the log only.
+
+**Per-platform flow**
+- **Facebook**: dialog/oauth → code → short-lived user token → long-lived (`fb_exchange_token`) → `me/permissions` (all required granted, else refuse) → `me/accounts` → one account per Page with its own never-expiring Page token. Health: `debug_token` (validity, scopes) + Page read.
+- **Instagram**: instagram.com/oauth/authorize → code (trailing `#_` stripped) → short-lived token → 60-day token (`ig_exchange_token`) → profile (`account_type` must be BUSINESS or MEDIA_CREATOR). Renewal: `ig_refresh_token` when under 14 days remain.
+- **YouTube**: Google consent (`access_type=offline`, `prompt=consent`, PKCE) → token exchange (refresh token required) → granted scopes checked → `channels.list mine=true` → one account per channel. Renewal: refresh token when the access token has under 5 minutes left; `invalid_grant` → `needs_reconnect`.
+
+**Publishing preparation**: `publishVideo()` exists on all three services and is tested against mocked providers, but nothing calls it yet (Phase 5/6). Facebook: Page `videos` with `file_url`. Instagram: Reels container → poll status → `media_publish`. YouTube: resumable session → PUT bytes. The video URL must come from our storage layer, never from user input.
 
 ## 1. Design goals
 
@@ -128,9 +161,9 @@ Account discovery: `channels.list(part=snippet, mine=true)` → one `youtube_cha
 4. Optional: `thumbnails.set` (requires a verified channel ⚠️).
 5. Poll `videos.list(part=status,processingDetails)` until `uploadStatus=processed`.
 
-### 5.4 Quota and audit — the biggest YouTube risk ⚠️
-- Default quota is on the order of **10,000 units/day per Cloud project**, and `videos.insert` costs on the order of **1,600 units** → roughly **6 uploads per day for the whole product** until a quota extension is approved. This quota is **shared by all users of your app**, not per user.
-- API projects that haven't passed YouTube's **API compliance audit** may have uploaded videos **forced to private** ⚠️.
+### 5.4 Quota and audit — YouTube risk (updated in Phase 4)
+- **Correction.** Google's current documentation counts uploads in a separate *Video Uploads* bucket: **100 upload calls per Cloud project per day, 1 unit each**. The earlier estimate (10,000 units/day with 1,600 per upload ≈ 6 uploads/day) is out of date. The limit is per project, shared by all users of the app, so still plan for a quota accountant.
+- Whether videos from API projects that have not passed YouTube's **API compliance audit** are forced to private should be re-confirmed on Google's current policy page before launch; the current quota page no longer states it.
 - **Action:** in Phase 1 file the quota-extension / compliance-audit request with a real screencast and policy docs; until approved, restrict YouTube publishing to internal/test channels and show honest UI ("YouTube publishing is in limited beta").
 - Mitigations: central **quota accountant** (count units per call, queue uploads when near the cap, resets at midnight Pacific ⚠️), prioritise scheduled posts, surface `quotaExceeded` as `social_rate_limited` with a retry time.
 

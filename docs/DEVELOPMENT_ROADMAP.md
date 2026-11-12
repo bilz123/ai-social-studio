@@ -66,7 +66,8 @@ Critical path: **P0 → P1 → P2 → P3 → P5** (with P4 parallel to late P2/P
 - Quotas surfaced in UI.
 - **DoD:** Playwright E2E happy path (fake provider); keyboard/screen-reader pass on core flow; mobile-responsive.
 
-### Phase 4 — Social connections (≈ 2 wk; parallel with late Phase 2/3)
+### Phase 4 — Social connections (≈ 2 wk; parallel with late Phase 2/3) — ✅ built (see SOCIAL_MEDIA_INTEGRATION §0)
+> Delivered: three provider services behind one interface, OAuth state + PKCE, encrypted tokens, refresh job, Connected Accounts UI, mocked-provider tests. **Not delivered:** Meta deauthorize/data-deletion callbacks (needed before Meta Live mode), a fake provider server for CI (mocked HTTP is used instead), real-provider verification (needs developer credentials). Setup: [SOCIAL_PROVIDER_SETUP](SOCIAL_PROVIDER_SETUP.md).
 - `SocialPlatform` interface + Meta and Google implementations for connect/callback/discover/revoke.
 - Encrypted token storage, `oauth_states`, account selection UI, token health job, reconnect UX.
 - Meta deauthorize + data-deletion callbacks.

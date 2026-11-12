@@ -191,3 +191,10 @@ Implemented in `apps/api/database/migrations` (15 files). Where it differs from 
   user is deleted so history survives account deletion.
 - Value constraints (statuses, ranges) are CHECK constraints on MySQL, created through `SqlCheck`;
   the SQLite test database skips them and the CI MySQL step proves them.
+
+## Phase 4 additions (as built)
+
+- `oauth_states` (new): `user_id` (cascade), `state_hash CHAR(64) UNIQUE` (SHA-256 of the random state; the raw value is never stored), `platform`, `code_verifier` (encrypted, PKCE), `expires_at`, `consumed_at`, `created_at`. Single use, 10-minute lifetime, pruned daily by `model:prune`.
+- `social_accounts`: added `status_reason VARCHAR(255)` (why it is not active, shown to the user), `last_checked_at`, `profile JSON` (followers, subscribers, account type, …). The provider CHECK is now `IN ('meta','instagram','google')` (Instagram Login is its own provider with its own app credentials).
+- `social_tokens` is unchanged: `access_token` / `refresh_token` hold ciphertext, one `access` row per account, `last_error` records the last failure code. Facebook Page tokens have `expires_at NULL` (non-expiring).
+- Disconnecting deletes the token rows and soft-deletes the account (`status = revoked`); reconnecting the same Page/channel restores the same row and public id.

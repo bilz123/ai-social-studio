@@ -130,12 +130,37 @@ CI (`.github/workflows/ci.yml`) runs all of the above plus `docker compose confi
   endpoint ships and the components stay unchanged.
 - `/profile` now redirects to `/settings`.
 
+
+## Phase 4: social integrations
+
+- **Connected Accounts** (`/accounts`): connect Facebook Pages, Instagram (Business/Creator, Instagram
+  Login) and YouTube channels with each platform's official OAuth; see status, permissions and token
+  health; check a connection; pause publishing; disconnect (with confirmation). The dashboard's
+  Connected accounts widget and counter now use real data. OAuth returns to
+  `/connections/callback/{platform}`.
+- **API** (`/api/v1/social/*`): platforms, accounts, connect, callback, check, update, disconnect. See
+  `docs/API_DESIGN.md` §7.0.
+- **Architecture**: `SocialIntegration` / `PublishesVideo` interfaces, `FacebookService`,
+  `InstagramService`, `YouTubeService`; OAuth state (hashed, single use, user and platform bound,
+  PKCE for Google); tokens encrypted at rest and never returned; token renewal under a lock; permission
+  tracking; `needs_reconnect` / `restricted` states; audit log entries for every action.
+- **Honest by design**: with no developer credentials a platform shows "Not set up" and its Connect
+  button is disabled; nothing is simulated. Credentials, redirect URIs and app review steps:
+  `docs/SOCIAL_PROVIDER_SETUP.md`. Check your setup with `php artisan social:check-config`.
+- **Scheduler**: `social:refresh-tokens` runs daily (renews Instagram and YouTube tokens, verifies every
+  account, flags the ones that need the user).
+- **Tests**: mocked provider responses (no network) for every code path; no real Meta or Google round
+  trip has been run yet.
+
 ## Deviations from the Phase 0 docs
 
 - Phase 2 ownership is per **user** (`user_id` on every record), not per workspace; workspaces can be
   added later without reshaping these tables. Video review state is a column on `generated_videos`
   (`approval_status`, `reviewed_at`, `review_comment`) instead of a `video_reviews` table.
 
+- Social OAuth: Instagram uses its own provider (Instagram Login) instead of going through a Facebook
+  Page, the callback is handled by the SPA, and YouTube's upload quota is 100 calls/day (not about 6).
+  See `docs/SOCIAL_MEDIA_INTEGRATION.md` §0.
 - Laravel skeleton is API-only (no `web` routes, no `/up`): health lives under `/api/v1/health`.
 - A single `docker-compose.yml` (dev) instead of base + override; production targets come in the
   deployment phase.
