@@ -23,7 +23,9 @@ jobs:
           coverage: none
       - run: composer install --no-interaction --prefer-dist
       - run: composer lint
+      # Run tests even when style checks fail, so one push reports every problem.
       - run: php artisan test
+        if: ${{ !cancelled() }}
 
   web:
     runs-on: ubuntu-latest
